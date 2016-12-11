@@ -63,7 +63,6 @@
 			) 
 		)
 	)
-
 )
 
 ;//_______Rules
@@ -116,6 +115,9 @@
 )
 
 ; Questa regola cerca delle K-cell vuote che siano nella stessa direzione di go-direction
+; Manca una strategia di risoluzione dei conflitti. Se l'agente si trova davanti un "muro" rispetto alla direzione
+; in cui vuole andare, non vengono generati "path-to-goal" e non ci si muove più
+; metodo greedy
 (defrule get_path_to_goal 
 	(declare (salience 8))
 	(goal-pos (id ?i) (pos-r ?x) (pos-c ?y))
@@ -133,6 +135,24 @@
 	(printout t crlf crlf)
 	(assert (path-to-goal (id ?i) (pos-r ?r1) (pos-c ?c1) (direction ?where)))
 )
+
+;(defrule dead_ends
+;	(declare (salience 8))
+;	(goal-pos (id ?i) (pos-r ?x) (pos-c ?y))
+;	(K-agent (pos-r ?rA) (pos-c ?cA))
+;	(go-direction (direction ?where))
+;	(K-cell (pos-r ?r1) (pos-c ?c1) (contains (neq Empty)))
+;	(test (or 
+;			(and (= ?r1 (- ?rA 1)) (= ?c1 ?cA) (not(neq ?where south)))
+;			(and (= ?r1 (+ ?rA 1)) (= ?c1 ?cA) (not(neq ?where north)))
+;			(and (= ?c1 (- ?cA 1)) (= ?r1 ?rA) (not(neq ?where west)))
+;			(and (= ?c1 (+ ?cA 1)) (= ?r1 ?rA) (not(neq ?where east)))
+;	))
+;	=>
+;	(printout t "found a dead end, must go back")
+;	(printout t crlf crlf)
+;	(assert (dead_end (id ?i) (pos-r ?rA) (pos-c ?cA) (direction ?where)))
+;)
 	
 ; Ho stabilito che al primo step l'azione sia una wait, per avere le percezioni	
 (defrule ask_act_0	
@@ -152,14 +172,28 @@
 	(status (step ?s))
 	?f <-(path-to-goal (id ?i) (pos-r ?r1) (pos-c ?c1) (direction ?d))
 	(K-agent (direction ?dA))
+	
+	;quest'ultima clausola impedisce che la regola si attivi se è già presente un'exec
+	;di fatto viene eseguita solo la prima exec generata, e non la migliore. Problema
+	(not (exec (step ?s)))
 	=>
-	(if (not (neq ?dA ?d))
-		then
-		(assert (exec (step ?s) (action Forward)))
-		(printout t "go on " ?s)
-		else
-		(assert (exec (step ?s) (action Turnright)))
-		(printout t "turn" ?i)
+	(switch (turn ?dA ?d)
+		(case same then 
+			(assert (exec (step ?s) (action Forward)))
+			;(printout t "go on " ?s)
+		)
+		(case right then 
+			(assert (exec (step ?s) (action Turnright)))
+			;(printout t "turn Right " ?s)
+		)
+		(case left then 
+			(assert (exec (step ?s) (action Turnleft)))
+			;(printout t "turn Left" ?s)
+		)
+		(case opposite then 
+			(assert (exec (step ?s) (action Turnleft)))
+			;(printout t "turn Left" ?s)
+		)		
 	)
 	(printout t crlf crlf)
 	(retract ?f)	
