@@ -1,7 +1,7 @@
 ;// AGENT
 
 
-(defmodule AGENT (import MAIN ?ALL))
+(defmodule AGENT (import MAIN ?ALL) (export ?ALL))
 
 
 ;//_______Templates
@@ -18,10 +18,18 @@
         (slot waste)
 )
 
-(deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
-(deftemplate goal-achieve (slot status))
-(deftemplate path-to-goal (slot id) (slot pos-r) (slot pos-c) (slot direction))
-(deftemplate go-direction (slot step) (slot direction))
+(deftemplate K-received-msg 
+	(slot step)
+	(slot sender)
+	(slot request)
+	(slot t_pos-r)
+	(slot t_pos-c)
+)
+
+;(deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
+;(deftemplate goal-achieve (slot status))
+;(deftemplate path-to-goal (slot id) (slot pos-r) (slot pos-c) (slot direction))
+;(deftemplate go-direction (slot step) (slot direction))
 
 ;//_______Functions
 
@@ -84,57 +92,89 @@
 	  =>
      (assert (K-agent (time 0) (step 0) (pos-r ?r) (pos-c ?c) (direction north) (free 2) (waste no)))
 	 ;linee aggiunte rispetto al codice originale, per provare il cammino verso un goal
-	 (assert (goal-pos (id 1) (pos-r 2) (pos-c 2)))
-	 (assert (goal-achieve (status false)))
+	 ;(assert (goal-pos (id 1) (pos-r 2) (pos-c 2)))
+	 ;(assert (goal-achieve (status false)))
 )
 
-(defrule goal_pos_achieved 
+(defrule on_meal_req_received
 	(declare (salience 10))
-	(goal-pos (id ?i) (pos-r ?x) (pos-c ?y))
-	(K-agent (pos-r ?x) (pos-c ?y))
+	(msg-to-agent (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc))
+	(prescription (patient ?P) (pills ?pills) (dessert ?dessert))
+	(status (step ?i))
+	(test (= ?s ?i))
+	(not (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
 	=>
-	(assert (goal-achieve (status true)))
-	(printout t "goal achieved, good job")
+	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
+	(assert (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
+	(focus PLANNER)
 )
+
+(defrule on_dessert_req_received
+	(declare (salience 10))
+	(msg-to-agent (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
+	(prescription (patient ?P) (pills ?pills) (dessert ?dessert))
+	;(consumed-meal (patient ?P)) condizione da aggiungere: se un paziente ha finito di mangiare il suo pranzo, riceve il dessert
+	(status (step ?i))
+	(test (= ?s ?i))	
+	(not (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+	=>
+	(if (neq ?dessert yes) then
+		;Rifiuto della richiesta perché contraria alla prescrizione 
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 rejected) (param4 nil)))
+		else 
+		(focus PLANNER)
+	)		
+	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
+	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+)
+
+
+;(defrule goal_pos_achieved 
+;	(declare (salience 10))
+;	(goal-pos (id ?i) (pos-r ?x) (pos-c ?y))
+;	(K-agent (pos-r ?x) (pos-c ?y))
+;	=>
+;	(assert (goal-achieve (status true)))
+;	(printout t "goal achieved, good job")
+;)
 
 ; A seconda di goal-pos, asserisce fatti di tipo "go-direction" per capire in che direzione deve andare
-(defrule get_direction
-	(declare (salience 9))
-	(goal-pos (pos-r ?x) (pos-c ?y))
-	(K-agent (step ?s) (pos-r ?r) (pos-c ?c))
-	=>
-	(if (> ?x ?r)
-		then (assert (go-direction (step ?s) (direction north))) )
-	(if (> ?r ?x)
-		then (assert (go-direction (step ?s) (direction south))))
-	(if (> ?c ?y) 
-		then (assert (go-direction (step ?s) (direction west))))
-	(if (> ?y ?c) 
-		then (assert (go-direction (step ?s) (direction east))))
-	
-)
+;(defrule get_direction
+;	(declare (salience 9))
+;	(goal-pos (pos-r ?x) (pos-c ?y))
+;	(K-agent (step ?s) (pos-r ?r) (pos-c ?c))
+;	=>
+;	(if (> ?x ?r)
+;		then (assert (go-direction (step ?s) (direction north))) )
+;	(if (> ?r ?x)
+;		then (assert (go-direction (step ?s) (direction south))))
+;	(if (> ?c ?y) 
+;		then (assert (go-direction (step ?s) (direction west))))
+;	(if (> ?y ?c) 
+;		then (assert (go-direction (step ?s) (direction east))))
+;)
 
 ; Questa regola cerca delle K-cell vuote che siano nella stessa direzione di go-direction
 ; Manca una strategia di risoluzione dei conflitti. Se l'agente si trova davanti un "muro" rispetto alla direzione
 ; in cui vuole andare, non vengono generati "path-to-goal" e non ci si muove più
 ; metodo greedy
-(defrule get_path_to_goal 
-	(declare (salience 8))
-	(goal-pos (id ?i) (pos-r ?x) (pos-c ?y))
-	(K-agent (pos-r ?rA) (pos-c ?cA))
-	(K-cell (pos-r ?r1) (pos-c ?c1) (contains Empty))
-	(go-direction (direction ?where))
-	(test (or 
-			(and (= ?r1 (- ?rA 1)) (= ?c1 ?cA) (not(neq ?where south)))
-			(and (= ?r1 (+ ?rA 1)) (= ?c1 ?cA) (not(neq ?where north)))
-			(and (= ?c1 (- ?cA 1)) (= ?r1 ?rA) (not(neq ?where west)))
-			(and (= ?c1 (+ ?cA 1)) (= ?r1 ?rA) (not(neq ?where east)))
-	))
-	=>
-	(printout t "found something")
-	(printout t crlf crlf)
-	(assert (path-to-goal (id ?i) (pos-r ?r1) (pos-c ?c1) (direction ?where)))
-)
+;(defrule get_path_to_goal 
+;	(declare (salience 8))
+;	(goal-pos (id ?i) (pos-r ?x) (pos-c ?y))
+;	(K-agent (pos-r ?rA) (pos-c ?cA))
+;	(K-cell (pos-r ?r1) (pos-c ?c1) (contains Empty))
+;	(go-direction (direction ?where))
+;	(test (or 
+;			(and (= ?r1 (- ?rA 1)) (= ?c1 ?cA) (not(neq ?where south)))
+;			(and (= ?r1 (+ ?rA 1)) (= ?c1 ?cA) (not(neq ?where north)))
+;			(and (= ?c1 (- ?cA 1)) (= ?r1 ?rA) (not(neq ?where west)))
+;			(and (= ?c1 (+ ?cA 1)) (= ?r1 ?rA) (not(neq ?where east)))
+;	))
+;	=>
+;	(printout t "found something")
+;	(printout t crlf crlf)
+;	(assert (path-to-goal (id ?i) (pos-r ?r1) (pos-c ?c1) (direction ?where)))
+;)
 
 ;(defrule dead_ends
 ;	(declare (salience 8))
@@ -161,43 +201,41 @@
         (printout t "first action: wait to get perceptions")
         (printout t crlf crlf)
         (modify ?f (work on))		
-		(assert (exec (step 0) (action Wait)))
-			
+		(assert (exec (step 0) (action Wait)))			
 		)
 
 ; Regola che cerca di direzionare l'agente verso il path-to-goal precedentemente deciso
 ; da riscrivere		
-(defrule get_to_path 
-	(declare (salience 7))
-	(status (step ?s))
-	?f <-(path-to-goal (id ?i) (pos-r ?r1) (pos-c ?c1) (direction ?d))
-	(K-agent (direction ?dA))
-	
+;(defrule get_to_path 
+;	(declare (salience 7))
+;	(status (step ?s))
+;	?f <-(path-to-goal (id ?i) (pos-r ?r1) (pos-c ?c1) (direction ?d))
+;	(K-agent (direction ?dA))	
 	;quest'ultima clausola impedisce che la regola si attivi se è già presente un'exec
 	;di fatto viene eseguita solo la prima exec generata, e non la migliore. Problema
-	(not (exec (step ?s)))
-	=>
-	(switch (turn ?dA ?d)
-		(case same then 
-			(assert (exec (step ?s) (action Forward)))
-			;(printout t "go on " ?s)
-		)
-		(case right then 
-			(assert (exec (step ?s) (action Turnright)))
-			;(printout t "turn Right " ?s)
-		)
-		(case left then 
-			(assert (exec (step ?s) (action Turnleft)))
-			;(printout t "turn Left" ?s)
-		)
-		(case opposite then 
-			(assert (exec (step ?s) (action Turnleft)))
-			;(printout t "turn Left" ?s)
-		)		
-	)
-	(printout t crlf crlf)
-	(retract ?f)	
-)		
+;	(not (exec (step ?s)))
+;	=>
+;	(switch (turn ?dA ?d)
+;		(case same then 
+;			(assert (exec (step ?s) (action Forward)))
+;			;(printout t "go on " ?s)
+;		)
+;		(case right then 
+;			(assert (exec (step ?s) (action Turnright)))
+;			;(printout t "turn Right " ?s)
+;		)
+;		(case left then 
+;			(assert (exec (step ?s) (action Turnleft)))
+;			;(printout t "turn Left" ?s)
+;		)
+;		(case opposite then 
+;			(assert (exec (step ?s) (action Turnleft)))
+;			;(printout t "turn Left" ?s)
+;		)		
+;	)
+;	(printout t crlf crlf)
+;	(retract ?f)	
+;)		
 
 ;(defrule update_cells 
 ;	(declare (salience 11))
@@ -234,14 +272,14 @@
 )
 
 ; Ritira i fatti go-direction dello step precedente
-(defrule retract_prev_directions 
-	(declare (salience 11))	
-	(perc-vision (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d))
-	?f <- (go-direction (step ?sgd) (direction ?any))	
-	(test (< ?sgd ?s))
-	=>
-	(retract ?f)
-)
+;(defrule retract_prev_directions 
+;	(declare (salience 11))	
+;	(perc-vision (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d))
+;	?f <- (go-direction (step ?sgd) (direction ?any))	
+;	(test (< ?sgd ?s))
+;	=>
+;	(retract ?f)
+;)
 	
 (defrule ask_act
  ?f <-   (status (step ?i))
