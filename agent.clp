@@ -23,7 +23,11 @@
 	(slot sender)
 	(slot request)
 	(slot t_pos-r)
-	(slot t_pos-c)
+	(slot t_pos-c)	
+	;slot per indicare se l'agente si è preso carico della richiesta
+	(slot taken (allowed-values yes no))
+	;slot per indicare se la richiesta è stata portata a termine dall'agente
+	(slot completed (allowed-values yes no) (default no))
 )
 
 ;(deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
@@ -96,6 +100,9 @@
 	 ;(assert (goal-achieve (status false)))
 )
 
+;Regola che si attiva all'arrivo di una richiesta di meal.
+;Delega al planner la gestione della richiesta
+;Salva inoltre una copia della richiesta in K-received-msg: la memoria dell'agente sui messaggi passati
 (defrule on_meal_req_received
 	(declare (salience 10))
 	(msg-to-agent (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc))
@@ -109,6 +116,11 @@
 	(focus PLANNER)
 )
 
+;Regola che si attiva all'arrivo di una richiesta di dessert.
+;Delega al planner la gestione della richiesta SE:
+; 1) è previsto che il paziente possa avere il dessert
+; 2) TODO: all'agente risulta che il paziente abbia già consumato il meal 
+;Salva inoltre una copia della richiesta in K-received-msg: la memoria dell'agente sui messaggi passati
 (defrule on_dessert_req_received
 	(declare (salience 10))
 	(msg-to-agent (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
@@ -127,7 +139,42 @@
 	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
 	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
 )
+	
+; Ho stabilito che al primo step l'azione sia una wait, per avere le percezioni	
+(defrule ask_act_0	
+ ?f <-   (status (step 0))
+    =>  (printout t crlf crlf)
+        (printout t "first action: wait to get perceptions")
+        (printout t crlf crlf)
+        (modify ?f (work on))		
+		(assert (exec (step 0) (action Wait)))			
+)
 
+; Fa l'update del fatto K-agent in base alle percezioni ricevute e ritira quello dello step precedente
+(defrule update_agent 
+	(declare (salience 12))
+	(perc-vision (time ?time) (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d))
+	?f <- (K-agent (step ?sA) (free ?fr) (waste ?w))
+	(test (< ?sA ?s))
+	=>
+	(modify ?f (time ?time) (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d) (free ?fr) (waste ?w))
+)	
+
+	
+(defrule ask_act
+ ?f <-   (status (step ?i))
+ (not (status (step 0)))
+    =>  (printout t crlf crlf)
+        (printout t "action to be executed at step:" ?i)
+        (printout t crlf crlf)
+        (modify ?f (work on))			
+)
+		
+(defrule exec_act
+    (status (step ?i))
+    (exec (step ?i))
+ => (focus MAIN)
+)
 
 ;(defrule goal_pos_achieved 
 ;	(declare (salience 10))
@@ -175,7 +222,7 @@
 ;	(printout t crlf crlf)
 ;	(assert (path-to-goal (id ?i) (pos-r ?r1) (pos-c ?c1) (direction ?where)))
 ;)
-
+;
 ;(defrule dead_ends
 ;	(declare (salience 8))
 ;	(goal-pos (id ?i) (pos-r ?x) (pos-c ?y))
@@ -192,18 +239,8 @@
 ;	(printout t "found a dead end, must go back")
 ;	(printout t crlf crlf)
 ;	(assert (dead_end (id ?i) (pos-r ?rA) (pos-c ?cA) (direction ?where)))
-;)
-	
-; Ho stabilito che al primo step l'azione sia una wait, per avere le percezioni	
-(defrule ask_act_0	
- ?f <-   (status (step 0))
-    =>  (printout t crlf crlf)
-        (printout t "first action: wait to get perceptions")
-        (printout t crlf crlf)
-        (modify ?f (work on))		
-		(assert (exec (step 0) (action Wait)))			
-		)
-
+;)		
+		
 ; Regola che cerca di direzionare l'agente verso il path-to-goal precedentemente deciso
 ; da riscrivere		
 ;(defrule get_to_path 
@@ -259,17 +296,6 @@
 ;	=>		
 ;	(assert )	
 ;)
-	
-; Fa l'update del fatto K-agent in base alle percezioni ricevute e ritira quello dello step precedente
-(defrule update_agent 
-	(declare (salience 12))
-	(perc-vision (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d))
-	?f <- (K-agent (step ?sA) (free ?fr) (waste ?w))
-	(test (< ?sA ?s))
-	=>
-	(assert (K-agent (time 0) (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d) (free ?fr) (waste ?w)))
-	(retract ?f)
-)
 
 ; Ritira i fatti go-direction dello step precedente
 ;(defrule retract_prev_directions 
@@ -281,18 +307,3 @@
 ;	(retract ?f)
 ;)
 	
-(defrule ask_act
- ?f <-   (status (step ?i))
- (not (status (step 0)))
-    =>  (printout t crlf crlf)
-        (printout t "action to be executed at step:" ?i)
-        (printout t crlf crlf)
-        (modify ?f (work on))			
-		)
-
-
-
-(defrule exec_act
-    (status (step ?i))
-    (exec (step ?i))
- => (focus MAIN))
