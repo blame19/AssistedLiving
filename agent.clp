@@ -30,6 +30,13 @@
 	(slot completed (allowed-values yes no) (default no))
 )
 
+;se c'é un piano in esecuzione, viene messo qui.
+(deftemplate K-plan
+	(slot step)
+	(multislot actions)
+	(slot number_of_actions)
+)
+
 ;(deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
 ;(deftemplate goal-achieve (slot status))
 ;(deftemplate path-to-goal (slot id) (slot pos-r) (slot pos-c) (slot direction))
