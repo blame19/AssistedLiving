@@ -27,7 +27,7 @@
 (deftemplate node (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot direction))
 
 
-(deftemplate frontier (slot path-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot direction))
+(deftemplate frontier (slot path-id) (slot father-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot direction))
 		
 
 ;TODO: meglio tenere l'id counter dei nodi univoci solo relativamente allo stesso path, quindi andrà riazzerato una volta finito di considerare un path
@@ -118,13 +118,12 @@
 
 (defrule A_star_path
 	(declare (salience 10))
-	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution ?found))
+	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution no))
 	;considero un nodo
 	(node (path-id ?id) (father-id ?fid) (node-id ?i) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-heur ?ch) (direction ?dir))
-	;considero anche suo padre, perché ho bisogno delle sue informazioni
-	(node (path-id ?id) (node-id ?fid) (cost-real ?fathercr) (cost-heur ?fatherch) (direction ?fatherdir))
-	(K-cell (pos-r ?kr) (pos-c ?kc) (contains Empty))
-	;TODO escludi il padre
+	;considero anche suo padre, perché ho bisogno delle sue informazioni : non è vero
+	(node (path-id ?id) (node-id ?fid) (node-r ?fatherr) (node-c ?fatherc) (direction ?fatherdir))
+	(K-cell (pos-r ?kr) (pos-c ?kc) (contains Empty))	
 	(test (or  
 		(and (= ?kr ?nr) (= ?kc (+ ?nc 1)) )
 		(and (= ?kr ?nr) (= ?kc (- ?nc 1)) )
@@ -132,20 +131,41 @@
 		(and (= ?kr (- ?nr 1)) (= ?kc ?nc))
 		)
 	)
+	;non voglio aggiungere nodi già generati alla frontiera ... forse inutile, non posso generare due fatti uguali
 	(not (frontier (path-id ?id) (node-r ?kr) (node-c ?kc)))
+	;escludo il padre : non deve essere aggiunto alla frontiera
+	(test (not (and (= ?fatherr ?kr) (= ?fatherc ?kc))))
+	;ma in generale non voglio nodi già generati nella frontiera
+	(not (node (node-r ?kr) (node-c ?kc)))
 	=>
-	; TODO DIREZIONE E COSTO REALE
-	(if (eq ?dir (relative_direction ?nr ?nc ?kr ?kc)) 
-		then 
-		(assert (frontier (path-id ?id) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 1)) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction ?dir) ))
-		else
-		(assert (frontier (path-id ?id) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 3)) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) ))
-		)
-	
-	
+	(switch (turn ?dir (relative_direction ?nr ?nc ?kr ?kc)) 
+	  (case same 
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 1)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) )
+	  (case right 
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 3)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) )	
+	  (case left 
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 3)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) )
+	  (case opposite 
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 5)) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) )
+	  )
 	;TODO: rimuovere
 	;(assert (frontier (path-id ?id) (node-r ?kr) (node-c ?kc) (cost-real 0) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction ?sdir) ))	
+)
 
+(defrule A_star_expand
+	(declare (salience 9))
+	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution no))
+	?f <- (id-counter (id ?i))
+	;considero un elemento della frontiera
+	?e <-(frontier (path-id ?id) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-heur ?ch) (direction ?dir))
+	
+	(not (frontier (cost-heur ?ch2&:(> ?ch ?ch2))))
+	
+	;devo trovare quello con costo minimo....		
+	=>
+	(assert (node (path-id ?id) (node-id ?i) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-heur ?ch)  (direction ?dir) ))
+	(retract ?e)
+	(modify ?f (id (+ ?id 1)))
 )
 
 ;TODO: alla fine di Astar, cancellare tutti i frontier
