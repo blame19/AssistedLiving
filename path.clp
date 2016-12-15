@@ -24,8 +24,7 @@
 ;trasforma le posizioni di candidate-goal-pos in oggetti path, di cui poi stimerà il costo e il percorso
 (defrule path_request 
 	(K-agent (pos-r ?rA) (pos-c ?cA) (direction ?dir))
-	(candidate-goal-pos (pos-r ?r) (pos-c ?c))
-	
+	(candidate-goal-pos (pos-r ?r) (pos-c ?c))	
 	=>
 	(assert (path (from-r ?rA) (from-c ?cA) (start-dir ?dir) (to-r ?r) (to-c ?c) ))
 	
@@ -37,8 +36,13 @@
 	?f <- (path (id nil) (from-r ?rA) (from-c ?cA) (start-dir ?dir) (to-r ?r) (to-c ?c) (min-step nil))
 	?e <- (id-counter (id ?id))
 	=>
-	(modify ?f (min-step (+ (abs (- ?rA ?r)) (abs (- ?cA ?c)) ) ) (id ?id) )
-	(modify ?e (id (+ ?id 1)))	
+	;se il percorso è una linea retta, allora l'agente non dovrà girarsi durante il cammino
+	(if (or (= (- ?rA ?r) 0) (= (- ?cA ?c) 0))  then 
+		(modify ?f (min-step (+ (abs (- ?rA ?r)) (abs (- ?cA ?c)) ) ) (id ?id) )
+	else		
+		(modify ?f (min-step (+ (abs (- ?rA ?r)) (abs (- ?cA ?c)) 2 ) ) (id ?id) )		
+	)
+	(modify ?e (id (+ ?id 1)))
 )
 
 ;(defrule generate_path_step

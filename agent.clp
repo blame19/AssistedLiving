@@ -110,7 +110,7 @@
 	(prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
 	(status (step ?i))
 	(test (= ?s ?i))
-	(not (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
+	(not (K-received-msg (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
 	=>
 	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
 	(assert (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
@@ -129,7 +129,7 @@
 	;(consumed-meal (patient ?P)) condizione da aggiungere: se un paziente ha finito di mangiare il suo pranzo, riceve il dessert
 	(status (step ?i))
 	(test (= ?s ?i))	
-	(not (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+	(not (K-received-msg (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
 	=>
 	(if (neq ?dessert yes) then
 		;Rifiuto della richiesta perché contraria alla prescrizione 
