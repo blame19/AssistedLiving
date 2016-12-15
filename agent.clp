@@ -3,6 +3,8 @@
 
 (defmodule AGENT (import MAIN ?ALL) (export ?ALL))
 
+;(defglobal ?*id-goal-pos* = 0 )
+
 
 ;//_______Templates
 (deftemplate K-cell  (slot pos-r) (slot pos-c) (slot contains))

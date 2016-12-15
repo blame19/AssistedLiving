@@ -6,10 +6,10 @@
 
 ;//_______Facts
 
+(deftemplate id-goal-pos (slot id))
+
 (deftemplate get-meal (slot step) (slot sender) (slot t_pos-r) (slot t_pos-c) (slot type))
 (deftemplate get-pills (slot step) (slot sender) (slot t_pos-r) (slot t_pos-c) (slot when))
-
-
 
 
 (deftemplate obj-goal-pos (slot id) (slot pos-r) (slot pos-c))
@@ -21,6 +21,13 @@
 ;//_______Functions
 
 ;//_______Rules
+
+(defrule initialize_id 
+	(declare (salience 11))
+	(not (id-goal-pos (id ?id)))
+	=>
+	(assert (id-goal-pos (id 0)))
+)
 
 ;Si attiva quando viene ricevuto un messaggio dall'agente di tipo request=meal, e l'agente passa il focus
 (defrule rcv_msg_meal
@@ -86,9 +93,9 @@
 			;Qui si possono fare due cose :
 			; 1 Lasciare il comando all'agente, fargli prendere il carico, e vedere se nel frattempo arrivano altre richieste
 			;    ricordando che la LoadMeal impiega 15 unità di tempo, potrebbe essere conveniente
-			;	(focus AGENT)
+			;	(pop focus)
 			; 2 Passare al planning del percorso per il tavolo ?tr ?tc
-			 (assert (obj-goal-pos (id ?s) (pos-r ?tr) (pos-c ?tc)))
+			 (assert (obj-goal-pos (pos-r ?tr) (pos-c ?tc)))
 	else 
 		;TODO: raggiungi il meal dispenser
 		(printout t "dove?" clrf)
@@ -100,7 +107,7 @@
 ;genera dei "candidati" a posizione di goal, che devono essere poi usati per calcolare un percorso ottimale
 (defrule goal_near_object 
 	(declare (salience 10))
-	?f <- (obj-goal-pos (id ?s) (pos-r ?tr) (pos-c ?tc))
+	?f <- (obj-goal-pos (pos-r ?tr) (pos-c ?tc))
 	(K-cell (pos-r ?r) (pos-c ?c) (contains Empty))
 	(test (or (and (= ?tr ?r) (= ?tc (+ ?c 1)))
 			  (and (= ?tr ?r) (= ?tc (- ?c 1)))
@@ -108,8 +115,11 @@
 			  (and (= ?tr (- ?r 1)) (= ?tc ?c))
 		)
 	)
+	?e <- (id-goal-pos (id ?id))
+	(not (candidate-goal-pos (pos-r ?r) (pos-c ?c)))
 	=> 
-	(assert (candidate-goal-pos (id ?s) (pos-r ?r) (pos-c ?c)))	
+	(assert (candidate-goal-pos (id ?id) (pos-r ?r) (pos-c ?c)))
+	(modify ?e (id (+ ?id 1)))	
 )
 
 (defrule ask_to_module_path
