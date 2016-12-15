@@ -27,7 +27,7 @@
 (deftemplate node (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot direction))
 
 
-(deftemplate frontier (slot path-id) (slot father-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot direction))
+(deftemplate frontier (slot path-id) (slot father-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot cost-total (default 0)) (slot direction))
 		
 
 ;TODO: meglio tenere l'id counter dei nodi univoci solo relativamente allo stesso path, quindi andrà riazzerato una volta finito di considerare un path
@@ -140,26 +140,41 @@
 	=>
 	(switch (turn ?dir (relative_direction ?nr ?nc ?kr ?kc)) 
 	  (case same 
-	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 1)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) )
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 1)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) ) )
+	  	) 
 	  (case right 
-	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 3)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) )	
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 3)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) 
+	  	)	
 	  (case left 
-	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 3)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) )
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 3)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) 
+	  	)
 	  (case opposite 
-	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 5)) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) )
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 5)) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) 
+	  	)
 	  )
 	;TODO: rimuovere
 	;(assert (frontier (path-id ?id) (node-r ?kr) (node-c ?kc) (cost-real 0) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction ?sdir) ))	
 )
 
-(defrule A_star_expand
+(defrule frontier_costs
 	(declare (salience 9))
+	?e <-(frontier (cost-real ?cr) (cost-heur ?ch) (cost-total 0))
+	
+	=>
+	(modify ?e (cost-total (+ ?cr ?ch)))
+	;TODO: rimuovere
+	;(assert (frontier (path-id ?id) (node-r ?kr) (node-c ?kc) (cost-real 0) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction ?sdir) ))	
+)
+
+
+(defrule A_star_expand
+	(declare (salience 8))
 	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution no))
 	?f <- (id-counter (id ?i))
 	;considero un elemento della frontiera
-	?e <-(frontier (path-id ?id) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-heur ?ch) (direction ?dir))
+	?e <-(frontier (path-id ?id) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-total ?ct) (cost-heur ?ch) (direction ?dir))
 	
-	(not (frontier (cost-heur ?ch2&:(> ?ch ?ch2))))
+	(not (frontier (cost-total ?ct2&:(> ?ct ?ct2))))
 	
 	;devo trovare quello con costo minimo....		
 	=>
@@ -167,6 +182,15 @@
 	(retract ?e)
 	(modify ?f (id (+ ?id 1)))
 )
+
+(defrule A_star_terminate
+	(declare (salience 10))	
+	?f <- (path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution no))
+	(node (path-id ?id) (node-id ?i) (father-id ?fid) (node-r ?tr) (node-c ?tc) (cost-real ?cr) (cost-heur ?ch)  (direction ?dir))
+	=>
+	(modify ?f (solution yes))
+
+	)
 
 ;TODO: alla fine di Astar, cancellare tutti i frontier
 ; tradurre i node in path-step
