@@ -13,8 +13,7 @@
 	(slot start-dir) 
 	(slot to-r) 
 	(slot to-c) 
-	(slot min-step) 
-	(slot cost-estimate) 
+	(slot cost) 
 	(slot solution (allowed-values yes no) (default no))
 )
 
@@ -26,7 +25,7 @@
 ; 5) direzione (che ha l'agente quando entra nella cella del nodo)
 (deftemplate node (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot direction))
 
-(deftemplate path-step (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot direction))
+
 (deftemplate generate-path-steps (slot path-id) (slot node-translate) (slot clean-all (allowed-values no yes) (default no)))
 
 
@@ -77,13 +76,6 @@
 	
 )
 
-(defrule clean_obj_goal
-	(declare (salience 5))
-	?f <- (obj-goal-pos (pos-r ?tr) (pos-c ?tc))
-	=>
-	(retract ?f)
-)
-
 ;Calcola una sottostima del numero di step necessari a completare il cammino
 ;una distanza di minkosky tra la posizione di start ed end
 ; (defrule path_min_step
@@ -99,29 +91,21 @@
 	
 ; )
 
-(defrule path_min_step
-	(declare (salience 11))
-	?f <- (path (from-r ?rA) (from-c ?cA) (start-dir ?dir) (to-r ?r) (to-c ?c) (min-step nil))	
-	=>
-	;se il percorso è una linea retta, allora l'agente non dovrà girarsi durante il cammino
-	 (modify ?f (min-step  (manhattan ?rA ?cA ?r ?c)))	
-)
-
 ;inizializza la root del path per l'algoritmo A-STAR
 (defrule A_star_root
 	(declare (salience 10))
-	(path (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution ?found))
+	(path (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?ce) (solution ?found))
 	(test (eq ?found no))
 	?f <- (id-counter (id ?i))
-	(not (node (path-id ?id) (node-r ?fr) (node-c ?fc) (cost-real 0) (cost-heur ?ms) (direction ?sdir)))
+	(not (node (path-id ?id) (node-r ?fr) (node-c ?fc) (cost-real 0) (direction ?sdir)))
 	=>
-	(assert (node (path-id ?id) (node-id ?i) (node-r ?fr) (father-id 0) (node-c ?fc) (cost-real 0) (cost-heur ?ms) (direction ?sdir)))
+	(assert (node (path-id ?id) (node-id ?i) (node-r ?fr) (father-id 0) (node-c ?fc) (cost-real 0) (cost-heur (manhattan ?fr ?fc ?tr ?tc)) (direction ?sdir)))
 	(modify ?f (id (+ ?id 1)))
 )
 
 (defrule A_star_path
 	(declare (salience 10))
-	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution no))
+	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc)  (cost ?ce) (solution no))
 	;considero un nodo
 	(node (path-id ?id) (father-id ?fid) (node-id ?i) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-heur ?ch) (direction ?dir))
 	;considero anche suo padre, perché ho bisogno delle sue informazioni : non è vero
@@ -172,7 +156,7 @@
 
 (defrule A_star_expand
 	(declare (salience 8))
-	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution no))
+	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?ce) (solution no))
 	?f <- (id-counter (id ?i))
 	;considero un elemento della frontiera
 	?e <-(frontier (path-id ?id) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-total ?ct) (cost-heur ?ch) (direction ?dir))
@@ -188,11 +172,11 @@
 
 (defrule A_star_terminate
 	(declare (salience 10))	
-	?f <- (path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution no))
+	?f <- (path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?ce) (solution no))
 	?e <- (id-counter)
 	(node (path-id ?id) (node-id ?i) (father-id ?fid) (node-r ?tr) (node-c ?tc) (cost-real ?cr) (cost-heur ?ch) (direction ?dir))
 	=>
-	(modify ?f (solution yes) (cost-estimate ?cr))
+	(modify ?f (solution yes) (cost ?cr))
 	(modify ?e (id 0))
 	(assert (generate-path-steps (path-id ?id) (node-translate ?i))	)
 	)
@@ -208,6 +192,11 @@
 		else (modify ?f (node-translate ?fid))
 	)
 )
+
+
+;alla fine di Astar, cancellare tutti i frontier
+; tradurre i node in path-step
+; cancellare i node
 
 (defrule cleaning_nodes 	
 	(declare (salience 12))
@@ -233,8 +222,18 @@
 	(not (frontier (path-id ?id)))
 	=>
 	(retract ?f)
-	)
+)
 
-;TODO: alla fine di Astar, cancellare tutti i frontier
-; tradurre i node in path-step
-; cancellare i node
+(defrule choose_one_path
+	(declare (salience 4))
+	(K-agent (pos-r ?kr) (pos-c ?kc))
+	;TODO: aggiungere un sistema di ID per le goal position
+	; in modo da poter fare matching con i path id
+	?f <- (obj-goal-pos (pos-r ?tr) (pos-c ?tc) (solution-id nil))
+	(path (id ?id) (from-r ?kr) (from-c ?kc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?c) (solution yes))
+	(not (path (from-r ?kr) (from-c ?kc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?c2&:(< ?c2 ?c)) (solution yes)))
+	=>
+	(modify ?f (solution-id ?id))
+	(pop-focus)
+
+)

@@ -12,9 +12,11 @@
 (deftemplate get-pills (slot step) (slot sender) (slot t_pos-r) (slot t_pos-c) (slot when))
 
 
-(deftemplate obj-goal-pos (slot id) (slot pos-r) (slot pos-c))
+(deftemplate obj-goal-pos (slot id) (slot pos-r) (slot pos-c) (slot solution-id))
 (deftemplate candidate-goal-pos (slot id) (slot pos-r) (slot pos-c))
 (deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
+
+(deftemplate path-step (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot direction))
 
 ;Va aggiunta una qualche sorta di lista delle azioni da mandare in exec (da gestire tramite gli "step" numerici)
 
@@ -95,7 +97,7 @@
 			;    ricordando che la LoadMeal impiega 15 unità di tempo, potrebbe essere conveniente
 			;	(pop focus)
 			; 2 Passare al planning del percorso per il tavolo ?tr ?tc
-			 (assert (obj-goal-pos (pos-r ?tr) (pos-c ?tc)))
+			 (assert (obj-goal-pos (pos-r ?tr) (pos-c ?tc)))			 
 	else 
 		;TODO: raggiungi il meal dispenser
 		(printout t "dove?" clrf)
@@ -107,7 +109,7 @@
 ;genera dei "candidati" a posizione di goal, che devono essere poi usati per calcolare un percorso ottimale
 (defrule goal_near_object 
 	(declare (salience 10))
-	?f <- (obj-goal-pos (pos-r ?tr) (pos-c ?tc))
+	?f <- (obj-goal-pos (pos-r ?tr) (pos-c ?tc) (solution-id nil))
 	(K-cell (pos-r ?r) (pos-c ?c) (contains Empty))
 	(test (or (and (= ?tr ?r) (= ?tc (+ ?c 1)))
 			  (and (= ?tr ?r) (= ?tc (- ?c 1)))
@@ -129,3 +131,28 @@
 	(focus PATH)
 )
 
+(defrule exec_path
+	;salience??
+	;(declare (salience 12))
+	(obj-goal-pos (solution-id ?id))	
+	(K-agent (step ?step) (pos-r ?kr) (pos-c ?kc) (direction ?kdir))
+	(path-step (path-id ?id) (node-id ?x) (node-r ?kr) (node-c ?kc))
+	;nodo figlio. il prossimo da raggiungere nel path
+	(path-step (path-id ?id) (node-id ?y) (father-id ?x) (node-r ?sonr) (node-c ?sonc) (direction ?sondir))
+	=>
+	(switch (turn ?kdir ?sondir) 
+		(case same then (assert (exec (step (+ ?step 1)) (action Forward))) )
+		(case left then (assert (exec (step (+ ?step 1)) (action Turnleft))
+					(exec (step (+ ?step 2)) (action Forward)) )
+		)
+		(case right then (assert (exec (step (+ ?step 1)) (action Turnright))
+					(exec (step (+ ?step 2)) (action Forward))
+						 ))
+		(case opposite then (assert (exec (step (+ ?step 1)) (action Turnleft))
+					    (exec (step (+ ?step 2)) (action Turnleft))
+					    (exec (step (+ ?step 3)) (action Forward))
+						 ))	
+
+	)
+	(pop-focus)
+)
