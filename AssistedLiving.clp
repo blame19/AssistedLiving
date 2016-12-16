@@ -178,6 +178,7 @@
            (load-facts "dominio/Prescription.txt")
 		   (load "agent.clp")   
 		   (load "planner.clp")
+		   (load "path.clp")
 
            (assert (create-map) (create-initial-setting)
 

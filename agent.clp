@@ -3,6 +3,8 @@
 
 (defmodule AGENT (import MAIN ?ALL) (export ?ALL))
 
+;(defglobal ?*id-goal-pos* = 0 )
+
 
 ;//_______Templates
 (deftemplate K-cell  (slot pos-r) (slot pos-c) (slot contains))
@@ -14,8 +16,8 @@
 	(slot pos-c) 
 	(slot direction) 
 	(multislot content)
-        (slot free)
-        (slot waste)
+	(slot free)
+    (slot waste)
 )
 
 (deftemplate K-received-msg 
@@ -30,12 +32,6 @@
 	(slot completed (allowed-values yes no) (default no))
 )
 
-;se c'é un piano in esecuzione, viene messo qui.
-(deftemplate K-plan
-	(slot step)
-	(multislot actions)
-	(slot number_of_actions)
-)
 
 ;(deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
 ;(deftemplate goal-achieve (slot status))
@@ -113,10 +109,10 @@
 (defrule on_meal_req_received
 	(declare (salience 10))
 	(msg-to-agent (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc))
-	(prescription (patient ?P) (pills ?pills) (dessert ?dessert))
+	(prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
 	(status (step ?i))
 	(test (= ?s ?i))
-	(not (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
+	(not (K-received-msg (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
 	=>
 	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
 	(assert (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
@@ -135,7 +131,7 @@
 	;(consumed-meal (patient ?P)) condizione da aggiungere: se un paziente ha finito di mangiare il suo pranzo, riceve il dessert
 	(status (step ?i))
 	(test (= ?s ?i))	
-	(not (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+	(not (K-received-msg (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
 	=>
 	(if (neq ?dessert yes) then
 		;Rifiuto della richiesta perché contraria alla prescrizione 
