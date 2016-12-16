@@ -26,6 +26,9 @@
 ; 5) direzione (che ha l'agente quando entra nella cella del nodo)
 (deftemplate node (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot direction))
 
+(deftemplate path-step (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot direction))
+(deftemplate generate-path-steps (slot path-id) (slot node-translate) (slot clean-all (allowed-values no yes) (default no)))
+
 
 (deftemplate frontier (slot path-id) (slot father-id) (slot node-r) (slot node-c) (slot cost-real) (slot cost-heur) (slot cost-total (default 0)) (slot direction))
 		
@@ -101,7 +104,7 @@
 	?f <- (path (from-r ?rA) (from-c ?cA) (start-dir ?dir) (to-r ?r) (to-c ?c) (min-step nil))	
 	=>
 	;se il percorso è una linea retta, allora l'agente non dovrà girarsi durante il cammino
-	 (modify ?f (min-step  (manhattan ?rA ?r ?cA ?c)))	
+	 (modify ?f (min-step  (manhattan ?rA ?cA ?r ?c)))	
 )
 
 ;inizializza la root del path per l'algoritmo A-STAR
@@ -149,7 +152,7 @@
 	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 3)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) 
 	  	)
 	  (case opposite 
-	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 5)) (cost-heur (manhattan ?kr ?tr ?kc ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) 
+	  	then (assert (frontier (path-id ?id) (father-id ?i) (node-r ?kr) (node-c ?kc) (cost-real (+ ?cr 5)) (cost-heur (manhattan ?kr ?kc ?tr ?tc)) (direction (relative_direction ?nr ?nc ?kr ?kc)) )) 
 	  	)
 	  )
 	;TODO: rimuovere
@@ -180,16 +183,56 @@
 	=>
 	(assert (node (path-id ?id) (node-id ?i) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-heur ?ch)  (direction ?dir) ))
 	(retract ?e)
-	(modify ?f (id (+ ?id 1)))
+	(modify ?f (id (+ ?i 1)))
 )
 
 (defrule A_star_terminate
 	(declare (salience 10))	
 	?f <- (path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (min-step ?ms) (cost-estimate ?ce) (solution no))
-	(node (path-id ?id) (node-id ?i) (father-id ?fid) (node-r ?tr) (node-c ?tc) (cost-real ?cr) (cost-heur ?ch)  (direction ?dir))
+	?e <- (id-counter)
+	(node (path-id ?id) (node-id ?i) (father-id ?fid) (node-r ?tr) (node-c ?tc) (cost-real ?cr) (cost-heur ?ch) (direction ?dir))
 	=>
-	(modify ?f (solution yes))
+	(modify ?f (solution yes) (cost-estimate ?cr))
+	(modify ?e (id 0))
+	(assert (generate-path-steps (path-id ?id) (node-translate ?i))	)
+	)
 
+(defrule generate_path_steps
+	(declare (salience 12))
+	(path (id ?id))
+	?f <- (generate-path-steps (path-id ?id) (node-translate ?x) (clean-all no))
+	(node (father-id ?fid) (node-id ?x) (path-id ?id) (node-r ?r) (node-c ?c) (direction ?dir))
+	=>
+	(assert (path-step (path-id ?id) (node-id ?x) (father-id ?fid) (node-r ?r) (node-c ?c) (direction ?dir)))
+	(if (= ?fid ?x 0) then (modify ?f (clean-all yes))
+		else (modify ?f (node-translate ?fid))
+	)
+)
+
+(defrule cleaning_nodes 	
+	(declare (salience 12))
+	(generate-path-steps (path-id ?id) (clean-all yes))
+	?f <- (node (path-id ?id)) 
+	=>
+	(retract ?f)
+	
+)
+
+(defrule cleaning_frontier	
+	(declare (salience 12))
+	(generate-path-steps (path-id ?id) (clean-all yes))
+	?e <- (frontier (path-id ?id))
+	=>
+	(retract ?e)
+)
+
+(defrule cleaning_done	
+	(declare (salience 12))
+	?f <- (generate-path-steps (path-id ?id) (clean-all yes))
+	(not (node (path-id ?id)))
+	(not (frontier (path-id ?id)))
+	=>
+	(retract ?f)
 	)
 
 ;TODO: alla fine di Astar, cancellare tutti i frontier
