@@ -32,6 +32,8 @@
 	(slot completed (allowed-values yes no) (default no))
 )
 
+(deftemplate proto-exec (slot step) (slot action) (slot param1) (slot param2) (slot param3) (slot param4))
+
 
 ;(deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
 ;(deftemplate goal-achieve (slot status))
@@ -163,13 +165,23 @@
 	(modify ?f (time ?time) (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d) (free ?fr) (waste ?w))
 )	
 
+(defrule assert_exec	
+	(declare (salience 12))
+	(K-agent (step ?step))
+	?f <- (proto-exec (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))
+	=>
+	(assert (exec (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4)))
+	(retract ?f)
+)
 	
 (defrule ask_act
  ?f <-   (status (step ?i))
  (not (status (step 0)))
-    =>  (printout t crlf crlf)
-        (printout t "action to be executed at step:" ?i)
-        (printout t crlf crlf)
+ ;(not (exec (step (+ ?i 1))))
+    =>  (focus PLANNER)
+    	;(printout t crlf crlf)
+        ;(printout t "action to be executed at step:" ?i)
+        ;(printout t crlf crlf)
         (modify ?f (work on))			
 )
 		

@@ -8,6 +8,7 @@
 
 (deftemplate path 
 	(slot id) 
+	(slot obj-id)
 	(slot from-r) 
 	(slot from-c) 
 	(slot start-dir) 
@@ -69,9 +70,9 @@
 (defrule path_request 
 	(declare (salience 6))
 	(K-agent (pos-r ?rA) (pos-c ?cA) (direction ?dir))
-	?f <- (candidate-goal-pos (id ?i) (pos-r ?r) (pos-c ?c))	
+	?f <- (candidate-goal-pos (father-obj-id ?fid) (id ?i) (pos-r ?r) (pos-c ?c))	
 	=>
-	(assert (path (id ?i) (from-r ?rA) (from-c ?cA) (start-dir ?dir) (to-r ?r) (to-c ?c) ))
+	(assert (path (obj-id ?fid) (id ?i) (from-r ?rA) (from-c ?cA) (start-dir ?dir) (to-r ?r) (to-c ?c) ))
 	(retract ?f)
 	
 )
@@ -229,9 +230,9 @@
 	(K-agent (pos-r ?kr) (pos-c ?kc))
 	;TODO: aggiungere un sistema di ID per le goal position
 	; in modo da poter fare matching con i path id
-	?f <- (obj-goal-pos (pos-r ?tr) (pos-c ?tc) (solution-id nil))
-	(path (id ?id) (from-r ?kr) (from-c ?kc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?c) (solution yes))
-	(not (path (from-r ?kr) (from-c ?kc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?c2&:(< ?c2 ?c)) (solution yes)))
+	?f <- (obj-goal-pos (id ?goalpos-id) (pos-r ?tr) (pos-c ?tc) (solution-id nil))
+	(path (obj-id ?gaolpos-id) (id ?id) (from-r ?kr) (from-c ?kc) (start-dir ?sdir) (cost ?c) (solution yes))
+	(not (path (obj-id ?gaolpos-id) (from-r ?kr) (from-c ?kc) (start-dir ?sdir) (cost ?c2&:(< ?c2 ?c)) (solution yes)))
 	=>
 	(modify ?f (solution-id ?id))
 	(pop-focus)
