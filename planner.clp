@@ -78,8 +78,9 @@
 ;Si attiva quando viene ricevuto un messaggio dall'agente di tipo request=dessert, e l'agente passa il focus
 (defrule rcv_msg_dessert
 	(msg-to-agent (request-time ?rqt) (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
-	?f <- (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
+	?f <- (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc) (taken no))
 	?e <- (current-step (value ?v))
+
 	=>
 	;1 answer the request
 	(assert (proto-exec (step ?v) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))	
