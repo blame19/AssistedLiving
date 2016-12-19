@@ -1,6 +1,6 @@
-;// PLANNER
+;// ACTION
 
-(defmodule PLANNER (import MAIN ?ALL) (export ?ALL) (import AGENT ?ALL))
+(defmodule ACTION (import MAIN ?ALL) (export ?ALL) (import STRATEGY ?ALL) (import AGENT ?ALL) )
 
 
 
@@ -21,10 +21,7 @@
 (deftemplate current-step (slot value))
 ;Va aggiunta una qualche sorta di lista delle azioni da mandare in exec (da gestire tramite gli "step" numerici)
 
-;//_______Functions
-
 ;//_______Rules
-
 (defrule initialize_id 
 	(declare (salience 15))
 	(not (id-goal-pos (id ?id)))
@@ -61,8 +58,7 @@
 				(assert (get-pills (step ?s) (sender ?P) (t_pos-r ?tr) (t_pos-c ?tc) (when ?pills)))						
 			else (printout t "must make room")
 				;TODO : gestire lo spazio
-		)
-		
+		)		
 	else (if (and (> ?free 0) (neq ?waste yes)) 
 		then (printout t "must get meal")
 			(assert (get-meal (step ?s) (sender ?P) (t_pos-r ?tr) (t_pos-c ?tc) (type ?meal)))			
@@ -70,9 +66,7 @@
 		;TODO : gestire lo spazio
 		)
 	)
-
-	(retract ?g)		
-	
+	(retract ?g)	
 )
 
 ;Si attiva quando viene ricevuto un messaggio dall'agente di tipo request=dessert, e l'agente passa il focus
@@ -152,26 +146,6 @@
 	(focus PATH)
 )
 
-
-;(defrule define_next_step_1
-;	(declare (salience 14))	
-;	(proto-exec (step ?st))
-;	(not (proto-exec (step ?st2&:(> ?st2 ?st))))
-;	?f <- (current-step (value ?v))
-;	(test (not (= ?st ?v)))	
-;	=>
-;	(modify ?f (value ?st)))
-;)
-;
-;(defrule define_next_step_2
-;	(declare (salience 14))	
-;	(K-agent (step ?step))	
-;	(not (proto-exec (step ?i)))
-;	?f <- (current-step (value ?v))
-;	(test (not (= ?v ?step)))		
-;	=>
-;	(modify ?f (value ?step))
-;)
 
 ;Trasforma il path calcolato dal modulo apposito in fatti di tipo proto-exec
 ;che l'agente può attuare e manipolare passo passo
