@@ -9,10 +9,11 @@
 (deftemplate id-goal-pos (slot id))
 
 (deftemplate get-meal (slot step) (slot sender) (slot t_pos-r) (slot t_pos-c) (slot type))
+(deftemplate get-dessert (slot step) (slot sender) (slot t_pos-r) (slot t_pos-c) (slot type))
 (deftemplate get-pills (slot step) (slot sender) (slot t_pos-r) (slot t_pos-c) (slot when))
 
 
-(deftemplate obj-goal-pos (slot id) (slot pos-r) (slot pos-c) (slot solution-id))
+(deftemplate obj-goal-pos (slot id) (slot pos-r) (slot pos-c) (slot solution-id) (slot intent) (slot type))
 (deftemplate candidate-goal-pos (slot father-obj-id) (slot id) (slot pos-r) (slot pos-c))
 (deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
 
@@ -41,14 +42,17 @@
 
 ;Si attiva quando viene ricevuto un messaggio dall'agente di tipo request=meal, e l'agente passa il focus
 (defrule rcv_msg_meal
-	(msg-to-agent (request-time ?rqt) (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc))
+	;forse è necessario ritrattare il fatto msg-to-agent
+	?g <- (msg-to-agent (request-time ?rqt) (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc))
 	?f <- (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc))
 	(K-agent (free ?free) (waste ?waste))	
 	(prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+	?e <- (current-step (value ?v))
 	=>
 	;1 answer the request
-	(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))	
+	(assert (proto-exec (step ?v) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))	
 	(modify ?f (taken yes))
+	(modify ?e (value (+ ?v 1)))
 	;2 plan how to get the meal
 	(if (neq ?pills no) then 
 		(if (and (> ?free 1) (neq ?waste yes)) 
@@ -65,7 +69,9 @@
 		else (printout t "must make room")
 		;TODO : gestire lo spazio
 		)
-	)		
+	)
+
+	(retract ?g)		
 	
 )
 
@@ -73,10 +79,12 @@
 (defrule rcv_msg_dessert
 	(msg-to-agent (request-time ?rqt) (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
 	?f <- (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
+	?e <- (current-step (value ?v))
 	=>
 	;1 answer the request
-	(assert (proto-exec (step (+ ?s 1))) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil))	
+	(assert (proto-exec (step ?v) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))	
 	(modify ?f (taken yes))
+	(modify ?e (value (+ ?v 1)))
 	;2 plan how to get the dessert
 )
 
@@ -86,10 +94,11 @@
 ;bisogna ricordare che questa regola si attiva quando è già stata mandata un'exec di tipo Inform per accettare la richiesta di pasto
 ;di conseguenza se vengono lanciate ulteriori exec devono avere step maggiore di quello dell'inform (vedi regola rcv_msg_meal)
 (defrule get_to_meal_disp 
-	(get-meal (step ?s) (sender ?P) (t_pos-r ?tr) (t_pos-c ?tc) (type ?type))
+	?g <- (get-meal (step ?s) (sender ?P) (t_pos-r ?tr) (t_pos-c ?tc) (type ?type))
 	(K-agent (step ?sA) (time ?sT) (pos-r ?rA) (pos-c ?cA) (direction ?dir) (free ?fr) (waste ?w))
 	(K-cell (pos-r ?rdisp) (pos-c ?cdisp) (contains MealDispenser))
 	?e <- (id-goal-pos (id ?id))
+	?f <- (current-step (value ?v))
 	=>	
 	;Controllo se l'agente è su uno dei quattro accessi al dispenser	
 	(if 
@@ -100,14 +109,16 @@
 			(and (= ?rdisp (- ?rA 1)) (= ?cdisp ?cA))
 		) 
 		then
-			(assert (proto-exec (step (+ ?s 1)) (action LoadMeal) (param1 ?rdisp) (param2 ?cdisp) (param3 ?type)))
+			(assert (proto-exec (step ?v) (action LoadMeal) (param1 ?rdisp) (param2 ?cdisp) (param3 ?type)))
+			(modify ?f (value (+ ?v 1)))
 			;Qui si possono fare due cose :
 			; 1 Lasciare il comando all'agente, fargli prendere il carico, e vedere se nel frattempo arrivano altre richieste
 			;    ricordando che la LoadMeal impiega 15 unità di tempo, potrebbe essere conveniente
 			;	(pop focus)
 			; 2 Passare al planning del percorso per il tavolo ?tr ?tc
-			 (assert (obj-goal-pos (id ?id) (pos-r ?tr) (pos-c ?tc)))
-			 (modify ?e (id (+ ?id 1)))			 
+			 (assert (obj-goal-pos (id ?id) (pos-r ?tr) (pos-c ?tc) (intent Meal) (type ?type)))
+			 (modify ?e (id (+ ?id 1)))
+			 (retract ?g)			 
 	else 
 		;TODO: raggiungi il meal dispenser
 		(printout t "dove?" clrf)
@@ -142,65 +153,90 @@
 )
 
 
-(defrule define_next_step_1
-	(declare (salience 14))	
-	(proto-exec (step ?st))
-	(not (proto-exec (step ?st2&:(> ?st2 ?st))))
-	?f <- (current-step (value ?v))
-	(test (not (= ?st ?v)))	
-	=>
-	(modify ?f (value ?st)))
-)
+;(defrule define_next_step_1
+;	(declare (salience 14))	
+;	(proto-exec (step ?st))
+;	(not (proto-exec (step ?st2&:(> ?st2 ?st))))
+;	?f <- (current-step (value ?v))
+;	(test (not (= ?st ?v)))	
+;	=>
+;	(modify ?f (value ?st)))
+;)
+;
+;(defrule define_next_step_2
+;	(declare (salience 14))	
+;	(K-agent (step ?step))	
+;	(not (proto-exec (step ?i)))
+;	?f <- (current-step (value ?v))
+;	(test (not (= ?v ?step)))		
+;	=>
+;	(modify ?f (value ?step))
+;)
 
-(defrule define_next_step_2
-	(declare (salience 14))	
-	(K-agent (step ?step))	
-	(not (proto-exec (step ?i)))
-	?f <- (current-step (value ?v))
-	(test (not (= ?v ?step)))		
-	=>
-	(modify ?f (value ?step))
-)
-
+;Trasforma il path calcolato dal modulo apposito in fatti di tipo proto-exec
+;che l'agente può attuare e manipolare passo passo
 (defrule exec_path
 	;salience??
-	(declare (salience 12))
-	
+	(declare (salience 12))	
 	(K-agent (step ?step) (pos-r ?kr) (pos-c ?kc) (direction ?kdir) )
 	(obj-goal-pos (id ?obj-id) (solution-id ?solution-id))	
 	(path-step (path-id ?solution-id) (node-id ?x) (node-r ?kr) (node-c ?kc))
 	;nodo figlio. il prossimo da raggiungere nel path
 	(path-step (path-id ?solution-id) (node-id ?y) (father-id ?x) (node-r ?sonr) (node-c ?sonc) (direction ?sondir))
-	(current-step (value ?value))
+	?f <- (current-step (value ?value))
 	(test (neq ?y ?x))
 	=>
 	(switch (turn ?kdir ?sondir) 
-		(case same then (assert (proto-exec (step (+ ?value 1)) (action Forward))) 
-				)
+		(case same then (assert (proto-exec (step (+ ?value 0)) (action Forward))) 
+				
+		(modify ?f (value (+ ?value 1)))
+		)
 
-		(case left then (assert (proto-exec (step (+ ?value 1)) (action Turnleft))
-					(proto-exec (step (+ ?value 2)) (action Forward)) )
+		(case left then (assert (proto-exec (step (+ ?value 0)) (action Turnleft))
+					(proto-exec (step (+ ?value 1)) (action Forward))) 
+						(modify ?f (value (+ ?value 2)))
 					
 
 		)
 
-		(case right then (assert (proto-exec (step (+ ?value 1)) (action Turnright))
-					(proto-exec (step (+ ?value 2)) (action Forward))
-						 )
+		(case right then (assert (proto-exec (step (+ ?value 0)) (action Turnright))
+					(proto-exec (step (+ ?value 1)) (action Forward)) )
+							(modify ?f (value (+ ?value 2)))
 					
 				)
 
-		(case opposite then (assert (proto-exec (step (+ ?value 1)) (action Turnleft))
-					    (proto-exec (step (+ ?value 2)) (action Turnleft))
-					    (proto-exec (step (+ ?value 3)) (action Forward))
-						 )
+		(case opposite then (assert (proto-exec (step (+ ?value 0)) (action Turnleft))
+					    (proto-exec (step (+ ?value 1)) (action Turnleft))
+					    (proto-exec (step (+ ?value 2)) (action Forward)))
+							(modify ?f (value (+ ?value 3))) 
 				
 
 		)	
 
 	)
+	(pop-focus)		
+)
+
+
+(defrule exec_intent
+	(declare (salience 12)) 
+	?e <- (obj-goal-pos (id ?obj-id) (pos-r ?objr) (pos-c ?objc) (solution-id ?solution-id) (intent ?intent) (type ?type))	
+	(K-agent (step ?step) (pos-r ?kr) (pos-c ?kc) (direction ?kdir) )
+	;l'agente è al path-step x
+	(path-step (path-id ?solution-id) (node-id ?x) (node-r ?kr) (node-c ?kc))
+	; e non esiste un path step con id maggiore: quindi ha raggiunto l'obbiettivo
+	(not (path-step (path-id ?solution-id) (node-id ?y&:(> ?y ?x))))
+	?f <- (current-step (value ?value))
+	=>
+	(switch ?intent 
+		(case Meal then (assert (proto-exec (step (+ ?value 0)) (action DeliveryMeal) (param1 ?objr) (param2 ?objc) (param3 ?type) ) ))
+		(case Pills then (assert (proto-exec (step (+ ?value 0)) (action DeliveryDessert) (param1 ?objr) (param2 ?objc) ) ))			
+		(case Dessert then (assert (proto-exec (step (+ ?value 0)) (action DeliveryPills) (param1 ?objr) (param2 ?objc) ) ))
+	)
+	(retract ?e)
 	(pop-focus)
-		
+
+
 )
 
 ;(defrule is_there_proto-exec
