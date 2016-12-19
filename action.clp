@@ -1,6 +1,6 @@
 ;// ACTION
 
-(defmodule ACTION (import MAIN ?ALL) (export ?ALL) (import STRATEGY ?ALL) (import AGENT ?ALL) )
+(defmodule ACTION (import MAIN ?ALL) (export ?ALL) (import AGENT ?ALL) (import STRATEGY ?ALL))
 
 
 
