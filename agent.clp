@@ -130,15 +130,16 @@
 	(status (step ?i))
 	(test (= ?s ?i))	
 	(not (K-received-msg (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
-	=>
+	=>	
+	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
+	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
 	(if (neq ?dessert yes) then
 		;Rifiuto della richiesta perché contraria alla prescrizione 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 rejected) (param4 nil)))
 		else 
 		(focus PLANNER)
 	)		
-	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
-	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+
 )
 
 
@@ -166,34 +167,57 @@
 
 ; Fa l'update del fatto K-agent in base alle percezioni di carico ricevute e ritira quello dello step precedente
 (defrule update_agent_load_meal
-	(declare (salience 14))
-	(perc-load (step ?step) (load yes))
-	?f <- (K-agent (step ?sA) (free ?fr) (content ?c))	
-	(K-exec (step ?step2) (action LoadMeal) (param3 ?type))
-	(test (= ?step (+ ?step2 1)))	
-	=>
+	(declare (salience 15))
+	?e <- (perc-load (step ?step) (load yes))
+	?f <- (K-agent (free ?fr) (content ?cont))	
+	(K-exec (step ?step2) (action LoadMeal) (param1 ?posr) (param2 ?posc) (param3 ?type))
 	
-	(if (= ?fr 2) then ( modify ?f (step ?step) (free (- ?fr 1)) (content ?type) )
-		;se l'agente non era libero bisogna riportare anche l'informazione precedentemente contenuta in multislot
-	else (switch ?c 
+	(test (= ?step (+ ?step2 1)))	
+	=>	
+	(switch ?c 
+		(case Empty then (modify ?f (step ?step) (free (- ?fr 1)) (content ?type) ))
 		(case dietetic then (modify ?f  (step ?step) (free (- ?fr 1)) (content ?type dietetic) ))
 		(case normal then (modify ?f  (step ?step) (free (- ?fr 1)) (content ?type normal) ))
 		(case pills then (modify ?f (step ?step) (free (- ?fr 1)) (content ?type pills) ))
 		(case dessert then (modify ?f (step ?step) (free (- ?fr 1)) (content ?type dessert) ))
-		)		
-		)
+		)	
 
+	(retract ?e)	
+)
+
+; Scarica un elemento (quando è l'unico caricato e viene data una perc_load)
+;va in conflitto con la successiva
+;(defrule update_agent_unload_all
+;	(declare (salience 15))
+;	?e <- (perc-load (step ?step) (load no))
+;	?f <- (K-agent (free 1))
+;	=> 
+;	(modify ?f (step ?step) (content Empty) (free 2))
+;	(retract ?e)
+;)
+
+; Sceglie l'elemento da scaricare nella lista
+; TODO non funziona 
+;Servono le op sui multislot ...
+(defrule update_agent_unload_one
+	(declare (salience 15))		
+	?e <- (perc-load (step ?step) (load no))
+	(K-exec (step ?step1) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3))
+	?f <- (K-agent (step ?step1) (content $?c) (free ?fr))
+	?g <- (K-received-msg (request ?req) (t_pos-r ?p1) (t_pos-c ?p2) (taken yes))		
+	(test (< ?fr 2))
+	(test (= ?step (+ ?step1 1)))
+	(test (member$ ?p3 $?c))
+	=> 
+	(if (or (eq ?a DeliveryMeal) (eq ?a DeliveryPills) (eq ?a DeliveryDessert))  
+		then (modify ?f (step (+ ?step 1)) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
+		(modify ?g (completed yes))
+
+
+		else (printout t "do nothing")  )
 	
 )
 
-(defrule update_agent_unload_all
-	(declare (salience 14))
-	(perc-load (step ?step) (load no))
-	?f <- (K-agent (content ?c))
-	=> 
-	(modify ?f (step ?step) (content Empty) (free 2))
-
-	)	
 
 ;Trasforma una proto-exec in una exec
 (defrule assert_exec	

@@ -36,7 +36,7 @@
 	(declare (salience 15))
 	(not (current-step (value ?v)))
 	=>
-	(assert (current-step (value 0)))
+	(assert (current-step (value 1)))
 )
 
 
