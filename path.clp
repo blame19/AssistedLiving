@@ -1,7 +1,7 @@
 
 ;// PATH
 
-(defmodule PATH (import MAIN ?ALL) (import AGENT ?ALL) (import PLANNER ?ALL))
+(defmodule PATH (import MAIN ?ALL) (import AGENT ?ALL) (import ACTION ?ALL))
 
 
 ;//_______Facts

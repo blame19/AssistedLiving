@@ -175,10 +175,12 @@
 
     ?f<-   (create) =>
            (load-facts "dominio/InitMap.txt")
-           (load-facts "dominio/Prescription.txt")
-		   (load "agent.clp")   
-		   (load "planner.clp")
-		   (load "path.clp")
+           (load-facts "dominio/Prescription.txt") 
+           (load "agent.clp")            
+		       (load "strategy.clp")  
+           (load "action.clp")
+		       (load "path.clp")
+           
 
            (assert (create-map) (create-initial-setting)
 

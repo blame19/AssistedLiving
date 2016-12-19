@@ -102,7 +102,7 @@
 )
 
 ;Regola che si attiva all'arrivo di una richiesta di meal.
-;Delega al planner la gestione della richiesta
+;Delega al ACTION la gestione della richiesta
 ;Salva inoltre una copia della richiesta in K-received-msg: la memoria dell'agente sui messaggi passati
 (defrule on_meal_req_received
 	(declare (salience 10))
@@ -114,11 +114,11 @@
 	=>
 	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
 	(assert (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
-	(focus PLANNER)
+	(focus ACTION)
 )
 
 ;Regola che si attiva all'arrivo di una richiesta di dessert.
-;Delega al planner la gestione della richiesta SE:
+;Delega al ACTION la gestione della richiesta SE:
 ; 1) è previsto che il paziente possa avere il dessert
 ; 2) TODO: all'agente risulta che il paziente abbia già consumato il meal 
 ;Salva inoltre una copia della richiesta in K-received-msg: la memoria dell'agente sui messaggi passati
@@ -137,7 +137,7 @@
 		;Rifiuto della richiesta perché contraria alla prescrizione 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 rejected) (param4 nil)))
 		else 
-		(focus PLANNER)
+		(focus ACTION)
 	)		
 
 )
@@ -174,7 +174,7 @@
 	
 	(test (= ?step (+ ?step2 1)))	
 	=>	
-	(switch ?c 
+	(switch ?cont 
 		(case Empty then (modify ?f (step ?step) (free (- ?fr 1)) (content ?type) ))
 		(case dietetic then (modify ?f  (step ?step) (free (- ?fr 1)) (content ?type dietetic) ))
 		(case normal then (modify ?f  (step ?step) (free (- ?fr 1)) (content ?type normal) ))
@@ -197,7 +197,6 @@
 ;)
 
 ; Sceglie l'elemento da scaricare nella lista
-; TODO non funziona 
 ;Servono le op sui multislot ...
 (defrule update_agent_unload_one
 	(declare (salience 15))		
@@ -235,7 +234,7 @@
  ?f <-   (status (step ?i))
  (not (status (step 0)))
  ;(not (exec (step (+ ?i 1))))
-    =>  (focus PLANNER)
+    =>  (focus ACTION)
     	;(printout t crlf crlf)
         ;(printout t "action to be executed at step:" ?i)
         ;(printout t crlf crlf)
