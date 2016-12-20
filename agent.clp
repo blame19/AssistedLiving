@@ -101,6 +101,13 @@
 	 ;(assert (goal-achieve (status false)))
 )
 
+(defrule TESTNEWPATH
+	(declare (salience 16))
+	(not (status (step 0)))
+	=>
+	(focus STRATEGY) 
+	)
+
 ;Regola che si attiva all'arrivo di una richiesta di meal.
 ;Delega al ACTION la gestione della richiesta
 ;Salva inoltre una copia della richiesta in K-received-msg: la memoria dell'agente sui messaggi passati

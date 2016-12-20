@@ -17,7 +17,7 @@
 (deftemplate candidate-goal-pos (slot father-obj-id) (slot id) (slot pos-r) (slot pos-c))
 (deftemplate goal-pos (slot id) (slot pos-r) (slot pos-c))
 
-(deftemplate path-step (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot direction))
+;(deftemplate path-step (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot direction))
 (deftemplate current-step (slot value))
 ;Va aggiunta una qualche sorta di lista delle azioni da mandare in exec (da gestire tramite gli "step" numerici)
 
@@ -149,47 +149,48 @@
 
 ;Trasforma il path calcolato dal modulo apposito in fatti di tipo proto-exec
 ;che l'agente può attuare e manipolare passo passo
-(defrule exec_path
-	;salience??
-	(declare (salience 12))	
-	(K-agent (step ?step) (pos-r ?kr) (pos-c ?kc) (direction ?kdir) )
-	(obj-goal-pos (id ?obj-id) (solution-id ?solution-id))	
-	(path-step (path-id ?solution-id) (node-id ?x) (node-r ?kr) (node-c ?kc))
-	;nodo figlio. il prossimo da raggiungere nel path
-	(path-step (path-id ?solution-id) (node-id ?y) (father-id ?x) (node-r ?sonr) (node-c ?sonc) (direction ?sondir))
-	?f <- (current-step (value ?value))
-	(test (neq ?y ?x))
-	=>
-	(switch (turn ?kdir ?sondir) 
-		(case same then (assert (proto-exec (step (+ ?value 0)) (action Forward))) 
-				
-		(modify ?f (value (+ ?value 1)))
-		)
-
-		(case left then (assert (proto-exec (step (+ ?value 0)) (action Turnleft))
-					(proto-exec (step (+ ?value 1)) (action Forward))) 
-						(modify ?f (value (+ ?value 2)))
+;TODO inibire e trasportare su strategy
+;(defrule exec_path
+;	;salience??
+;	(declare (salience 12))	
+;	(K-agent (step ?step) (pos-r ?kr) (pos-c ?kc) (direction ?kdir) )
+;	(obj-goal-pos (id ?obj-id) (solution-id ?solution-id))	
+;	(path-step (path-id ?solution-id) (node-id ?x) (node-r ?kr) (node-c ?kc))
+;	;nodo figlio. il prossimo da raggiungere nel path
+;	(path-step (path-id ?solution-id) (node-id ?y) (father-id ?x) (node-r ?sonr) (node-c ?sonc) (direction ?sondir))
+;	?f <- (current-step (value ?value))
+;	(test (neq ?y ?x))
+;	=>
+;	(switch (turn ?kdir ?sondir) 
+;		(case same then (assert (proto-exec (step (+ ?value 0)) (action Forward))) 
+;				
+;		(modify ?f (value (+ ?value 1)))
+;		)
+;
+;		(case left then (assert (proto-exec (step (+ ?value 0)) (action Turnleft))
+;					(proto-exec (step (+ ?value 1)) (action Forward))) 
+;						(modify ?f (value (+ ?value 2)))
+;					
+;
+;		)
+;
+;		(case right then (assert (proto-exec (step (+ ?value 0)) (action Turnright))
+;					(proto-exec (step (+ ?value 1)) (action Forward)) )
+;							(modify ?f (value (+ ?value 2)))
 					
-
-		)
-
-		(case right then (assert (proto-exec (step (+ ?value 0)) (action Turnright))
-					(proto-exec (step (+ ?value 1)) (action Forward)) )
-							(modify ?f (value (+ ?value 2)))
-					
-				)
-
-		(case opposite then (assert (proto-exec (step (+ ?value 0)) (action Turnleft))
-					    (proto-exec (step (+ ?value 1)) (action Turnleft))
-					    (proto-exec (step (+ ?value 2)) (action Forward)))
-							(modify ?f (value (+ ?value 3))) 
+;				)
+;
+;		(case opposite then (assert (proto-exec (step (+ ?value 0)) (action Turnleft))
+;					    (proto-exec (step (+ ?value 1)) (action Turnleft))
+;					    (proto-exec (step (+ ?value 2)) (action Forward)))
+;							(modify ?f (value (+ ?value 3))) 
 				
 
-		)	
+;		)	
 
-	)
-	(pop-focus)		
-)
+;	)
+;	(pop-focus)		
+;)
 
 
 (defrule exec_intent
