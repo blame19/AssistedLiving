@@ -25,9 +25,17 @@
         (slot completed (allowed-values yes no))
 )
 
+;struttura di un path. Non viene riempito da STRATEGY, ma da path; è qu solo perché in questo modo sono entrambi visibili
+(deftemplate path  (slot id) (slot obj-id)
+        (slot from-r) (slot from-c) 
+        (slot start-dir) 
+        (slot to-r) (slot to-c) 
+        (slot cost) (slot solution (allowed-values yes no) (default no))
+)
+
 ;per chiedere a PATH di calcolare un percorso
 (deftemplate path-request
-        (slot id) (slot from-r) (slot from-c) (slot to-r) (slot to-c) (slot start-dir)
+        (slot id) (slot from-r) (slot from-c) (slot to-r) (slot to-c) (slot start-dir) (slot solution)
 )
 
 
@@ -39,11 +47,11 @@
         (declare (salience 16))
         (not (status (step 0)))
         =>
-        (assert (path-request (id 0) (from-r 8) (from-c 6) (to-r 7) (to-c 2) (start-dir north) ))
+        (assert (path-request (id 0) (from-r 8) (from-c 6) (to-r 4) (to-c 4) (start-dir north) ))
         )
 
 (defrule ask_path
-        (path-request (id ?id) (from-r ?r) (from-c ?c) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
+        (path-request (id ?id) (from-r ?r) (from-c ?c) (to-r ?tr) (to-c ?tc) (start-dir ?sdir) (solution nil))
         =>
         (focus PATH)
 )

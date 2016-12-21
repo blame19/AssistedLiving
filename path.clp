@@ -1,7 +1,7 @@
 
 ;// PATH
 
-(defmodule PATH (import MAIN ?ALL) (import AGENT ?ALL) (import ACTION ?ALL))
+(defmodule PATH (import MAIN ?ALL) (import AGENT ?ALL) (import STRATEGY ?ALL))
 
 
 ;//_______Facts
@@ -10,12 +10,12 @@
 ;TODO scorpora il PATH dal resto
 ;TODO rappresenta anche le azioni (girarsi) oltre agli spostamenti
 ; quindi la funzionalità di action, che traduceva le celle in azioni di spostamento, si sposta qui
-(deftemplate path  (slot id) (slot obj-id)
-	(slot from-r) (slot from-c) 
-	(slot start-dir) 
-	(slot to-r) (slot to-c) 
-	(slot cost) (slot solution (allowed-values yes no) (default no))
-)
+;(deftemplate path  (slot id) (slot obj-id)
+;	(slot from-r) (slot from-c) 
+;	(slot start-dir) 
+;	(slot to-r) (slot to-c) 
+;	(slot cost) (slot solution (allowed-values yes no) (default no))
+;)
 
 ;il modulo PATH comunicherà con gli altri tramite path_requests
 ; chi vuole fare una richiesta dovrà implementare un fatto del tipo
@@ -101,7 +101,7 @@
 )
 
 (defrule initialize_path_obj_pos
-	(declare (salience 11))
+	(declare (salience 13))
 	(path-request (id ?ext-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
 	(K-cell (pos-r ?tr) (pos-c ?tc))
 	?e <- (obj-counter (id ?obj-id))
@@ -133,7 +133,7 @@
 
 
 (defrule initialize_path_to_empty
-	(declare (salience 10))
+	(declare (salience 11))
 	(path-request (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
 	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
 	(K-cell (pos-r ?tr) (pos-c ?tc) (contains Empty))
@@ -146,7 +146,7 @@
 )
 
 (defrule initialize_path_to_not_empty
-	(declare (salience 10))
+	(declare (salience 11))
 	(path-request (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
 	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
 	(K-cell (pos-r ?tr) (pos-c ?tc) (contains ?cont))
@@ -163,7 +163,6 @@
 	=>
 	(assert (path (obj-id ?obj-id) (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?r) (to-c ?c) ))
 	(modify ?f (id (+ ?id 1)))
-	
 )
 
  
@@ -171,9 +170,9 @@
 ;inizializza la root del path per l'algoritmo A-STAR
 (defrule A_star_root
 	(declare (salience 10))
-	(path (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?ce) (solution ?found))
-	(test (eq ?found no))
+	(path (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?ce) (solution no))
 	?f <- (node-counter (id ?i))
+	(test (= ?i 0))
 	(not (node (path-id ?id) (node-r ?fr) (node-c ?fc) (cost-real 0) (direction ?sdir)))
 	=>
 	(assert (node (path-id ?id) (node-id ?i) (node-r ?fr) (father-id 0) (node-c ?fc) (cost-real 0) (cost-heur (manhattan ?fr ?fc ?tr ?tc)) (direction ?sdir)))
@@ -200,7 +199,7 @@
 	;escludo il padre : non deve essere aggiunto alla frontiera
 	(test (not (and (= ?fatherr ?kr) (= ?fatherc ?kc))))
 	;ma in generale non voglio nodi già generati nella frontiera
-	(not (node (node-r ?kr) (node-c ?kc)))
+	(not (node (path-id ?id) (node-r ?kr) (node-c ?kc)))
 	=>
 	(switch (turn ?dir (relative_direction ?nr ?nc ?kr ?kc)) 
 	  (case same 
@@ -228,8 +227,7 @@
 
 (defrule frontier_costs
 	(declare (salience 9))
-	?e <-(frontier (cost-real ?cr) (cost-heur ?ch) (cost-total 0))
-	
+	?e <-(frontier (cost-real ?cr) (cost-heur ?ch) (cost-total 0))	
 	=>
 	(modify ?e (cost-total (+ ?cr ?ch)))
 	;TODO: rimuovere
@@ -242,10 +240,8 @@
 	(path (id ?id) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) (cost ?ce) (solution no))
 	?f <- (node-counter (id ?i))
 	;considero un elemento della frontiera
-	?e <-(frontier (path-id ?id) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-total ?ct) (cost-heur ?ch) (direction ?dir))
-	
-	(not (frontier (cost-total ?ct2&:(> ?ct ?ct2))))
-	
+	?e <-(frontier (path-id ?id) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-total ?ct) (cost-heur ?ch) (direction ?dir))	
+	(not (frontier (path-id ?id) (cost-total ?ct2&:(> ?ct ?ct2))))	
 	;devo trovare quello con costo minimo....		
 	=>
 	(assert (node (path-id ?id) (node-id ?i) (father-id ?fid) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-heur ?ch)  (direction ?dir) ))
@@ -306,32 +302,6 @@
 	(retract ?v)
 )
 
-;defrule recount_path_steps_last_leaf
-;	(declare (salience 12))
-;	?v <- (temp (count ?var))
-;	(path (id ?id) (to-r ?tr) (to-c ?tc) )
-;	?f <- (generate-path-steps (path-id ?id) (node-translate ?x) (action recount_last))
-;	?e <- (path-step (path-id ?id) (node-id ?nid) (father-id ?fid) )
-;	(not (path-step (path-id ?id) (node-id ?nid2) (father-id ?nid)))
-;	=>
-;	(modify ?e (node-id (+ ?fid 1)))
-;	(modify ?f (action clean))
-;	(retract ?v)
-;)
-
-;(defrule generate_mirror_path
-;	(declare (salience 12))
-;	(path (id ?pid))
-;	?g <- (id-counter (id ?id))
-;	?f <- (generate-path-steps (path-id ?pid) (node-translate ?x) (action mirror))
-;	(path-step (path-id ?pid) (node-id ?x) (father-id ?fid) (node-r ?r) (node-c ?c) (direction ?dir)))
-;	=>
-;	(assert (path (path-id ?id))
-;	(if (= ?fid ?x 0) then (modify ?f (clean-all yes))
-;		else (modify ?f (node-translate ?fid))
-;	)
-;	(modify ?g (id (+ ?id 1)))
-;)
 
 ;alla fine di Astar, cancellare tutti i frontier
 ; tradurre i node in path-step
