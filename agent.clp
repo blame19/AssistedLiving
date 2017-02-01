@@ -101,12 +101,6 @@
 	 ;(assert (goal-achieve (status false)))
 )
 
-(defrule TESTNEWPATH
-	(declare (salience 16))
-	(not (status (step 0)))
-	=>
-	(focus STRATEGY) 
-	)
 
 ;Regola che si attiva all'arrivo di una richiesta di meal.
 ;Delega al ACTION la gestione della richiesta
@@ -121,7 +115,7 @@
 	=>
 	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
 	(assert (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
-	(focus ACTION)
+	(focus STRATEGY)
 )
 
 ;Regola che si attiva all'arrivo di una richiesta di dessert.
@@ -144,7 +138,7 @@
 		;Rifiuto della richiesta perché contraria alla prescrizione 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 rejected) (param4 nil)))
 		else 
-		(focus ACTION)
+		(focus STRATEGY)
 	)		
 
 )
@@ -241,7 +235,7 @@
  ?f <-   (status (step ?i))
  (not (status (step 0)))
  ;(not (exec (step (+ ?i 1))))
-    =>  (focus ACTION)
+    =>  
     	;(printout t crlf crlf)
         ;(printout t "action to be executed at step:" ?i)
         ;(printout t crlf crlf)
