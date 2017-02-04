@@ -58,13 +58,7 @@
 
 ;//_______Functions
 
-(deffunction manhattan (?r1 ?c1 ?r2 ?c2)
-	(if (or (= (- ?r1 ?r2) 0) (= (- ?c1 ?c2) 0)) 
-		then (+ (abs(- ?r1 ?r2)) (abs(- ?c1 ?c2)))
 
-		else (+ (abs(- ?r1 ?r2)) (abs(- ?c1 ?c2)) 2) 
-	)
-)
 
 (deffunction relative_direction (?r1 ?c1 ?r2 ?c2)
 	(if (and (= ?r1 ?r2) (< ?c1 ?c2)) 
@@ -134,35 +128,39 @@
 
 (defrule initialize_path_to_empty
 	(declare (salience 11))
-	(path-request (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
+	?g <- (path-request (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
 	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
-	(K-cell (pos-r ?tr) (pos-c ?tc) (contains Empty))
+	(K-cell (pos-r ?tr) (pos-c ?tc) (contains ?con))
+	(test (or (eq ?con Empty) (eq ?con Robot) (eq ?con Parking)))
 	?f <- (id-counter (id ?id))
 	(not (path (obj-id ?obj-id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) ))
 	=>
 	(assert (path (obj-id ?obj-id) (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) ))
 	(modify ?f (id (+ ?id 1)))
+	(retract ?g)
 	
 )
 
 (defrule initialize_path_to_not_empty
 	(declare (salience 11))
-	(path-request (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
+	?g <- (path-request (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
 	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
 	(K-cell (pos-r ?tr) (pos-c ?tc) (contains ?cont))
 	(test (neq ?cont Empty))
 	?f <- (id-counter (id ?id))
-	(K-cell (pos-r ?r) (pos-c ?c) (contains Empty))
+	(K-cell (pos-r ?r) (pos-c ?c) (contains ?con))
 	(test (or (and (= ?tr ?r) (= ?tc (+ ?c 1)))
 			  (and (= ?tr ?r) (= ?tc (- ?c 1)))
 			  (and (= ?tr (+ ?r 1)) (= ?tc ?c))
 			  (and (= ?tr (- ?r 1)) (= ?tc ?c))
 		)
 	)
+	(test (or (eq ?con Empty) (eq ?con Robot) (eq ?con Parking)))
 	(not (path (obj-id ?obj-id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?r) (to-c ?c) ))
 	=>
 	(assert (path (obj-id ?obj-id) (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?r) (to-c ?c) ))
 	(modify ?f (id (+ ?id 1)))
+	(retract ?g)
 )
 
  

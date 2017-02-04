@@ -78,6 +78,14 @@
 	)
 )
 
+(deffunction manhattan (?r1 ?c1 ?r2 ?c2)
+	(if (or (= (- ?r1 ?r2) 0) (= (- ?c1 ?c2) 0)) 
+		then (+ (abs(- ?r1 ?r2)) (abs(- ?c1 ?c2)))
+
+		else (+ (abs(- ?r1 ?r2)) (abs(- ?c1 ?c2)) 2) 
+	)
+)
+
 ;//_______Rules
 
 (defrule  beginagent1
@@ -100,7 +108,6 @@
 	 ;(assert (goal-pos (id 1) (pos-r 2) (pos-c 2)))
 	 ;(assert (goal-achieve (status false)))
 )
-
 
 ;Regola che si attiva all'arrivo di una richiesta di meal.
 ;Delega al ACTION la gestione della richiesta
@@ -230,8 +237,15 @@
 )
 
 
+(defrule proto_exec_finished
+(declare (salience 1))
+	(not (proto-exec))
+     =>  
+     (focus STRATEGY)	
+)
 	
 (defrule ask_act
+	(declare (salience 0))
  ?f <-   (status (step ?i))
  (not (status (step 0)))
  ;(not (exec (step (+ ?i 1))))
@@ -243,6 +257,7 @@
 )
 		
 (defrule exec_act
+	(declare (salience 2))
     (status (step ?i))
     (exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))
    
