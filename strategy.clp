@@ -41,7 +41,8 @@
         (slot cost)
         (slot chosen_path)
         ;utility
-        (slot expanded (default no))
+        (slot expanded (default no))        
+        (slot informed (default no))
         ;slot per contenere i dati dai messaggi dell'agente
         (slot request-time) 
         (slot step)
@@ -79,12 +80,12 @@
 )
 
 
-(defrule ask_path
-        (declare (salience 10))
-        (path-request (id ?id) (from-r ?r) (from-c ?c) (to-r ?tr) (to-c ?tc) (start-dir ?sdir) (solution nil))
-        =>
-        (focus PATH)
-)
+; (defrule ask_path
+;         (declare (salience 10))
+;         (path-request (id ?id) (from-r ?r) (from-c ?c) (to-r ?tr) (to-c ?tc) (start-dir ?sdir) (solution nil))
+;         =>
+;         (focus PATH)
+; )
 
 ;nella nuova implementazione, questo dovrebbe raccogliere i messaggi dall'agente e 
 ;fornire una lista di "azioni da fare" da ordinare poi in un piano
@@ -145,8 +146,7 @@
         ;che il TODO sia stato generato
         (retract ?g)
 )
-;nella nuova implementazione, questo dovrebbe raccogliere i messaggi dall'agente e 
-;fornire una lista di "azioni da fare" da ordinare poi in un piano
+
 (defrule todo_meal_expand  
         (declare (salience 10))        
         ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal))
@@ -182,27 +182,75 @@
 )
 
 
-
-;idea: calcolare subito i path necessari a tutti i TODO presenti. 
-;NOTA: in realtà si potrebbe usare sempre l'euristica della manhattan distance.
-;Senza un path e un costo di path, la strategy non può farsi un'idea del costo dell'azione complessiva.
-(defrule path_generate
-        (declare (salience 10))
-        (K-agent (step ?step) (pos-r ?r) (pos-c ?c) (direction ?sdir))   
-        ?g <- (todo (id ?todo-id) (goal_pos-r ?gr) (goal_pos-c ?gc))
-        (not (path-request (id ?todo-id)))
+(defrule todo_dessert_expand  
+        (declare (salience 10))        
+        ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request dessert))         
+        (K-cell (pos-r ?ddisp-r) (pos-c ?ddisp-c) (contains DessertDispenser))
+        (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
+        (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
+        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+        ?h <- (todo-counter (id ?id))
+        (K-agent (step ?step))
         =>
-        (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))    
+        (if (eq ?dessert yes) 
+                then
+                ;se la persona ha diritto a quel dessert
+                (if (member$ dessert $?con)
+                        then ;OK
+                        (printout t "ok" clrf)
+                        (modify ?f (expanded yes))
+                        else 
+                        (if (eq free 0)
+                                then 
+                                ;MAKE SPACE
+                                ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo dessert
+                                (modify ?f (expanded yes))
+                                else
+                                ;GET THE DESSERT
+                                (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_dessert) (goal_pos-r ?ddisp-r) (goal_pos-c ?ddisp-c)) )
+                                (modify ?h (id (+ ?id 1)))
+                                (modify ?f (expanded yes))
+                        )  
+                ) 
+                else
+                (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 no) (param4 nil)))
+                (retract ?f)
+                (pop-focus)
+        ) 
 )
 
-;Una volta calcolato il path all'obbiettivo del todo, si può fare una stima un po' più precisa del costo.
-(defrule todo_cost_estimate
-        (declare (salience 9))
-        ?f <- (todo (id ?todo-id) (request ?req) (chosen_path nil))
-        (path (id ?path-id) (obj-id ?todo-id) (cost ?cost1) (solution yes))
-        (not (path (obj-id ?todo-id) (cost ?cost2&:(< ?cost2 ?cost1)) (solution yes)))
+
+;NOTA: in realtà si potrebbe usare sempre l'euristica della manhattan distance.
+; ;idea: calcolare subito i path necessari a tutti i TODO presenti. 
+; ;Senza un path e un costo di path, la strategy non può farsi un'idea del costo dell'azione complessiva.
+; (defrule path_generate
+;         (declare (salience 10))
+;         (K-agent (step ?step) (pos-r ?r) (pos-c ?c) (direction ?sdir))   
+;         ?g <- (todo (id ?todo-id) (goal_pos-r ?gr) (goal_pos-c ?gc))
+;         (not (path-request (id ?todo-id)))
+;         =>
+;         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))    
+; )
+
+; ;Una volta calcolato il path all'obbiettivo del todo, si può fare una stima un po' più precisa del costo.
+; (defrule todo_cost_estimate
+;         (declare (salience 9))
+;         ?f <- (todo (id ?todo-id) (request ?req) (chosen_path nil))
+;         (path (id ?path-id) (obj-id ?todo-id) (cost ?cost1) (solution yes))
+;         (not (path (obj-id ?todo-id) (cost ?cost2&:(< ?cost2 ?cost1)) (solution yes)))
+;         =>
+;         (modify ?f (cost ?cost1) (chosen_path ?path-id))
+
+; )
+
+;Stima dei costi con la manhattan distance invece di un path calcolato completamente
+;TODO: Aggiungere costi delle azioni 
+(defrule todo_cost_estimate_manhattan
+        (declare (salience 10))
+        ?f <- (todo (id ?todo-id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (cost nil))
+        (K-agent (pos-r ?r) (pos-c ?c))
         =>
-        (modify ?f (cost ?cost1) (chosen_path ?path-id))
+        (modify ?f (cost (manhattan ?r ?c ?gr ?gc)) )
 
 )
 
@@ -211,12 +259,78 @@
 ;TODO: priority / scelta delle azioni da fare. Per ora è solo un fifo, prende il TODO più vecchio
 (defrule strategy_choose_FIFO
         (declare (salience 8))
-        ?f <- (todo (id ?id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req))
+        ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc))
         (not (todo (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
         ; la clausola sul costo gli dà errore, al momento considera solo la FIFO (cost ?c2&:(< ?c2 ?c1))
-        =>
-        (printout t "execute todo " ?id)
-        (assert (exec-todo (id ?id))) 
-        (focus ACTION)
+        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir))
+        =>        
+        (printout t "execute todo " ?todo-id)
+        (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
+        (focus PATH)
+        (assert (exec-todo (id ?todo-id))) 
+)   
 
+
+(defrule choose_best_path
+        (declare (salience 10))
+        ?f <- (todo (id ?todo-id) (request ?req) (chosen_path nil))        
+        (path (id ?path-id) (obj-id ?todo-id) (cost ?cost1) (solution yes) (to-r ?tr) (to-c ?tc))
+        (not (path (obj-id ?todo-id) (cost ?cost2&:(< ?cost2 ?cost1)) (solution yes)))
+        ; (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir))
+        ; ?g <- (path-request (id ?id) (from-r ?r) (from-c ?c) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
+        =>
+        (modify ?f (cost ?cost1) (chosen_path ?path-id))
+        ; (retract ?g)
+)
+
+(defrule inform_yes
+      (declare (salience 10))
+      (exec-todo (id ?id))
+      (K-agent (step ?step))
+      ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed ?info))
+      (test (or (eq ?info no) (eq ?info wait)))
+      =>
+      (if (eq ?req load_meal)
+              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
+                   (modify ?f (informed yes))
+                   (pop-focus)     
+        )
+      (if (eq ?req load_dessert)
+              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
+                   (modify ?f (informed yes))
+                   (pop-focus)     
+        )
+)
+
+(defrule inform_delay
+      (declare (salience 10))
+      (exec-todo (id ?id))
+      (K-agent (step ?step))
+      (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed yes))
+      ?f <- (todo (id ?id2&:(neq ?id ?id2)) (sender ?P2) (request ?req2) (informed no))
+      (test (or (eq ?req2 load_meal) (eq ?req2 load_dessert)))
+      =>
+      (if (eq ?req2 load_meal)
+              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 meal) (param3 wait) (param4 nil)))
+                   (modify ?f (informed wait))
+                   (pop-focus)     
+        )
+      (if (eq ?req2 load_dessert)
+              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 dessert) (param3 wait) (param4 nil)))
+                   (modify ?f (informed wait))
+                   (pop-focus)     
+        )
+)
+
+(defrule pass_to_action
+        (declare (salience 8))
+        (exec-todo (id ?todo-id))
+        (todo (id ?todo-id) (chosen_path ?path-id))
+        =>
+        (if (neq ?path-id nil)
+                then
+                (focus ACTION)
+                else
+                (printout t "errore" clrf clrf )
+        )
 )

@@ -98,12 +98,12 @@
 	(declare (salience 13))
 	(path-request (id ?ext-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
 	(K-cell (pos-r ?tr) (pos-c ?tc))
-	?e <- (obj-counter (id ?obj-id))
-	(not (obj-pos (pos-r ?tr) (pos-c ?tc)))
+	; ?e <- (obj-counter (id ?obj-id))
+	; (not (obj-pos (pos-r ?tr) (pos-c ?tc)))
 	=>
-	(assert (obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc)))
-	(modify ?e (id (+ ?obj-id 1)))
-)
+	(assert (obj-pos (obj-id ?ext-id) (pos-r ?tr) (pos-c ?tc)))
+; 	(modify ?e (id (+ ?obj-id 1)))
+ )
 
 ;(defrule initialize_path_to_empty
 ;	(declare (salience 10))
@@ -128,7 +128,7 @@
 
 (defrule initialize_path_to_empty
 	(declare (salience 11))
-	?g <- (path-request (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
+	?g <- (path-request (id ?obj-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
 	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
 	(K-cell (pos-r ?tr) (pos-c ?tc) (contains ?con))
 	(test (or (eq ?con Empty) (eq ?con Robot) (eq ?con Parking)))
@@ -137,13 +137,13 @@
 	=>
 	(assert (path (obj-id ?obj-id) (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) ))
 	(modify ?f (id (+ ?id 1)))
-	(retract ?g)
+	;(retract ?g)
 	
 )
 
 (defrule initialize_path_to_not_empty
 	(declare (salience 11))
-	?g <- (path-request (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
+	?g <- (path-request (id ?obj-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
 	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
 	(K-cell (pos-r ?tr) (pos-c ?tc) (contains ?cont))
 	(test (neq ?cont Empty))
@@ -160,7 +160,7 @@
 	=>
 	(assert (path (obj-id ?obj-id) (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?r) (to-c ?c) ))
 	(modify ?f (id (+ ?id 1)))
-	(retract ?g)
+	;(retract ?g)
 )
 
  
@@ -330,6 +330,16 @@
 	=>
 	(retract ?f)
 )
+
+(defrule clean_request
+	(declare (salience 2))
+	?g <- (path-request (id ?obj-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
+	=>
+	(retract ?g)
+
+
+
+	)
 
 ;TODO: La scelta del path migliore è ora di competenza di Strategy: riportare OGNI percorso.
 ;togliere

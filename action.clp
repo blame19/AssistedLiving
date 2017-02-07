@@ -43,14 +43,19 @@
 	(assert (number-of-steps (number ?nid)))
 )
 
-; (defrule count-path-steps-zero
-; 	(declare (salience 13))
-; 	(translate_path (id ?path-id))	
-; 	(path-step (path-id ?path-id) (node-id 0) (father-id 0) (node-r ?r) (node-c ?c) (direction ?dir))
-; 	(not (path-step (path-id ?path-id) (node-id ?nid2&:(> ?nid2 0))))
+; (defrule exec-preliminary-action
+; 	(declare (salience 10))
+; 	(exec-todo (id ?id))
+; 	?g <- (current-step-counter (step ?step))
+; 	(todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req))
 ; 	=>
-; 	(assert (number-of-steps (number 0)))
+; 	(if (eq ?req load_meal)
+; 		then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
+;         	     (modify ?g (step (+ ?step 1)))
+;     	)
 ; )
+
+
 
 
 (defrule exec-path
