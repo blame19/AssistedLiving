@@ -276,7 +276,7 @@
      (focus STRATEGY)	
 )
 	
-(defrule ask_act
+(defrule wait_act
 	(declare (salience 0))
  ?f <-   (status (step ?i))
  (not (status (step 0)))
@@ -285,7 +285,8 @@
     	;(printout t crlf crlf)
         ;(printout t "action to be executed at step:" ?i)
         ;(printout t crlf crlf)
-        (modify ?f (work on))			
+        (modify ?f (work on))
+        (assert (exec (step ?i) (action Wait)))			
 )
 		
 (defrule exec_act

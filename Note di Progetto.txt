@@ -1,0 +1,35 @@
+Versione del progetto 0.1
+
+L'agente al momento gestisce richieste di pasto (dietetic e normal) e dessert con successo.
+
+Convenzioni/ Euristiche adottate:
+	La prima azione è sempre una Wait (da cambiare)
+	Se l'agente non ha niente da fare, aspetta (da cambiare)
+	La strategia è una FIFO. 
+	Le Inform_yes vengono sempre mandate prima di caricare pasti o dessert, 
+		in modo da ridurre (idealmente) il tempo di penalità.
+	Nella generazione dei todo, tutti i todo hanno una priorità 10, eccetto
+		le azioni di load - priorità 9. Di conseguenza le load dovrebbero
+		essere fatte sempre prima.
+	
+	
+
+
+Rimangono da testare:
+	Gestione richieste multiple 
+		ad esempio se ci sono due load, con dispenser vicini, spazio permettendo l'agente 
+		dovrebbe eseguire PRIMA le load e poi le consegne. Teoricamente dovrebbe succedere.
+	Le Inform_wait non sono ancora state testate, sebbene ci sia una regola apposita.
+
+
+Rimangono da modellare:
+	Aggiungere il costo della singola azione, oltre che al costo del path, all'interno del todo.
+	delivery di pills
+	pulizia del tavolo
+	Gestione dei rifiuti (e obbligo di non trasportare cibo insieme ai rifiuti)
+	messaggio di "Done" (vedi consegna del progetto) e ritorno al parking
+	Azioni di "riflesso" (esempio: l'agente vede qualcuno davanti a sé, ferma 
+		il piano e aspetta se ne vada)
+	Routine di "idling": che cosa fa l'agente quando non ha compiti da fare. 
+		Un'idea sarebbe quella di farlo dirigere verso un punto "strategico" dal quale 
+		raggiungere i vari dispenser in caso di bisogno.
