@@ -151,8 +151,7 @@
         (declare (salience 10))        
         ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
-        (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))        
-        (K-cell (pos-r ?ddisp-r) (pos-c ?ddisp-c) (contains DessertDispenser))
+        (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
         (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
@@ -192,6 +191,7 @@
         ?h <- (todo-counter (id ?id))
         (K-agent (step ?step))
         =>
+        ;se nella prescrizione c'è scritto che la persona specificata può ricevere il dessert
         (if (eq ?dessert yes) 
                 then
                 ;se la persona ha diritto a quel dessert
@@ -213,6 +213,7 @@
                         )  
                 ) 
                 else
+                ;se la persona non deve ricevere il dessert, si nega la richiesta
                 (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 no) (param4 nil)))
                 (retract ?f)
                 (pop-focus)
@@ -283,44 +284,49 @@
         ; (retract ?g)
 )
 
-(defrule inform_yes
-      (declare (salience 10))
-      (exec-todo (id ?id))
-      (K-agent (step ?step))
-      ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed ?info))
-      (test (or (eq ?info no) (eq ?info wait)))
-      =>
-      (if (eq ?req load_meal)
-              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
-                   (modify ?f (informed yes))
-                   (pop-focus)     
-        )
-      (if (eq ?req load_dessert)
-              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
-                   (modify ?f (informed yes))
-                   (pop-focus)     
-        )
-)
+;SPOSTATE IN ACTION
+; ;Se è stato scelto un todo di tipo load_meal o load_dessert, l'agente deve anche effettuare l'inform necessario
+; (defrule inform_yes
+;       (declare (salience 10))
+;       (exec-todo (id ?id))
+;       (K-agent (step ?step))
+;       ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed ?info))
+;       (test (or (eq ?info no) (eq ?info wait)))
+;       =>
+;       (if (eq ?req load_meal)
+;               then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
+;                    (modify ?f (informed yes))
+;                    (pop-focus)     
+;         )
+;       (if (eq ?req load_dessert)
+;               then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
+;                    (modify ?f (informed yes))
+;                    (pop-focus)     
+;         )
+; )
 
-(defrule inform_delay
-      (declare (salience 10))
-      (exec-todo (id ?id))
-      (K-agent (step ?step))
-      (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed yes))
-      ?f <- (todo (id ?id2&:(neq ?id ?id2)) (sender ?P2) (request ?req2) (informed no))
-      (test (or (eq ?req2 load_meal) (eq ?req2 load_dessert)))
-      =>
-      (if (eq ?req2 load_meal)
-              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 meal) (param3 wait) (param4 nil)))
-                   (modify ?f (informed wait))
-                   (pop-focus)     
-        )
-      (if (eq ?req2 load_dessert)
-              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 dessert) (param3 wait) (param4 nil)))
-                   (modify ?f (informed wait))
-                   (pop-focus)     
-        )
-)
+
+; ;Se è stato scelto un todo di un certo tipo, ma esiste anche un altro todo in attesa di tipo load_meal o dessert per qualcuno,
+; ;quella persona viene fatta attendere
+; (defrule inform_delay
+;       (declare (salience 10))
+;       (exec-todo (id ?id))
+;       (K-agent (step ?step))
+;       (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed yes))
+;       ?f <- (todo (id ?id2&:(neq ?id ?id2)) (sender ?P2) (request ?req2) (informed no))
+;       (test (or (eq ?req2 load_meal) (eq ?req2 load_dessert)))
+;       =>
+;       (if (eq ?req2 load_meal)
+;               then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 meal) (param3 wait) (param4 nil)))
+;                    (modify ?f (informed wait))
+;                    (pop-focus)     
+;         )
+;       (if (eq ?req2 load_dessert)
+;               then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 dessert) (param3 wait) (param4 nil)))
+;                    (modify ?f (informed wait))
+;                    (pop-focus)     
+;         )
+; )
 
 (defrule pass_to_action
         (declare (salience 8))

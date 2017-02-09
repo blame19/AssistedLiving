@@ -217,7 +217,7 @@
 	(test (member$ ?p3 $?c))
 	=> 
 	(if (or (eq ?a DeliveryMeal) (eq ?a DeliveryPills) (eq ?a DeliveryDessert))  
-		then (modify ?f (step (+ ?step 1)) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
+		then (modify ?f (step ?step)) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
 		(modify ?g (completed yes))
 
 
@@ -231,6 +231,7 @@
 	(declare (salience 12))
 	(K-agent (step ?step))
 	?f <- (proto-exec (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))
+	;(not (proto-exec (step ?step2&:(< ?step2 ?step1)) ))
 	=>
 	(assert (exec (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4)))
 	(retract ?f)
@@ -258,7 +259,7 @@
 		
 (defrule exec_act
 	(declare (salience 2))
-    (status (step ?i))
+    (K-agent (step ?i))
     (exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))
    
    => 

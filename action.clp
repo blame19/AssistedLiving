@@ -18,13 +18,22 @@
 (defrule read_todo_initialize
 	(declare (salience 15))
 	(exec-todo (id ?id))
-	(todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req))
-	(K-agent (step ?step))
+	(todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req))	
 	=>
 	(assert (translate_path (id ?path-id)))
-	(assert (current-step-counter (step ?step)))
 	(assert (node-counter (i 0)))
+	(assert (current-step-counter (step 0)))
 )
+
+(defrule current_step_initialize
+	(declare (salience 15))
+	(K-agent (step ?step))
+	?f <- (current-step-counter (step ?step2))
+	(test (< ?step2 ?step))
+	=>
+	(modify ?f (step ?step))
+
+	)
 
 (defrule copy-path-steps
 	(declare (salience 13))
@@ -56,6 +65,49 @@
 ; )
 
 
+;Se è stato scelto un todo di tipo load_meal o load_dessert, l'agente deve anche effettuare l'inform necessario
+(defrule inform_yes
+      (declare (salience 14))
+      (exec-todo (id ?id))
+      ?g <- (current-step-counter (step ?step))
+      ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed ?info))
+      (test (or (eq ?info no) (eq ?info wait)))
+      (test (or (eq ?req load_meal) (eq ?req load_dessert)))
+      =>
+      (if (eq ?req load_meal)
+              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
+                   (modify ?f (informed yes))
+                   (modify ?g (step (+ ?step 1)))
+        )
+      (if (eq ?req load_dessert)
+              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
+                   (modify ?f (informed yes))
+                   (modify ?g (step (+ ?step 1)))
+        )
+)
+
+
+;Se è stato scelto un todo di un certo tipo, ma esiste anche un altro todo in attesa di tipo load_meal o dessert per qualcuno,
+;quella persona viene fatta attendere
+(defrule inform_delay
+      (declare (salience 14))
+      (exec-todo (id ?id))
+      ?g <- (current-step-counter (step ?step))
+      (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed yes))
+      ?f <- (todo (id ?id2&:(neq ?id ?id2)) (sender ?P2) (request ?req2) (informed no))
+      (test (or (eq ?req2 load_meal) (eq ?req2 load_dessert)))
+      =>
+      (if (eq ?req2 load_meal)
+              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 meal) (param3 wait) (param4 nil)))
+                   (modify ?f (informed wait))
+                   (modify ?g (step (+ ?step 1)))                  
+        )
+      (if (eq ?req2 load_dessert)
+              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 dessert) (param3 wait) (param4 nil)))
+                   (modify ?f (informed wait))
+                   (modify ?g (step (+ ?step 1)))                       
+        )
+)
 
 
 (defrule exec-path
@@ -88,7 +140,8 @@
         (modify ?f (i (+ ?i 1)))
 )
 
-
+;All'ultimo passo del percorso l'agente ha raggiunto la posizione di goal (goal_pos)
+;può quindi eseguire l'azione che voleva fare, indicata dalla ?req nel todo
 (defrule exec-path-last-step
 	(declare (salience 10))
 	?h <- (translate_path (id ?path-id))
@@ -97,7 +150,6 @@
         ?g <- (current-step-counter (step ?step))        
         (number-of-steps (number ?max))
         (test (= ?i ?max))
-
 
         ?k <- (exec-todo (id ?id))
 	?l <- (todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc))
@@ -110,6 +162,10 @@
         	(case load_meal then (assert (proto-exec (step ?step) (action LoadMeal) (param1 ?gr) (param2 ?gc) (param3 ?type)))
         				(modify ?g (step (+ ?step 1))))
         	(case meal then (assert (proto-exec (step ?step) (action DeliveryMeal) (param1 ?gr) (param2 ?gc) (param3 ?type)))
+        				(modify ?g (step (+ ?step 1))))
+        	(case load_dessert then (assert (proto-exec (step ?step) (action LoadDessert) (param1 ?gr) (param2 ?gc)))
+        				(modify ?g (step (+ ?step 1))))
+        	(case dessert then (assert (proto-exec (step ?step) (action DeliveryDessert) (param1 ?gr) (param2 ?gc)))
         				(modify ?g (step (+ ?step 1))))
         )
         (retract ?h)
