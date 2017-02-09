@@ -105,27 +105,6 @@
 ; 	(modify ?e (id (+ ?obj-id 1)))
  )
 
-;(defrule initialize_path_to_empty
-;	(declare (salience 10))
-;	(path-request (id ?ext-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
-;	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
-;	(K-cell (pos-r ?tr) (pos-c ?tc) (contains ?c))
-;	?f <- (id-counter (id ?id))
-;	(K-cell (pos-r ?r) (pos-c ?c) (contains Empty))
-;	(test (or (and (= ?tr ?r) (= ?tc (+ ?c 1)))
-;			  (and (= ?tr ?r) (= ?tc (- ?c 1)))
-;			  (and (= ?tr (+ ?r 1)) (= ?tc ?c))
-;			  (and (= ?tr (- ?r 1)) (= ?tc ?c))
-;		)
-;	)
-;	=>
-;	(if (eq ?c Empty) then  (assert (path (obj-id ?obj-id) (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?tr) (to-c ?tc) ))
-;	else 	(assert (path (obj-id ?obj-id) (id ?id) (from-r ?fr) (from-c ?fc) (start-dir ?sdir) (to-r ?r) (to-c ?c) ))
-;	(modify ?f (id (+ ?id 1)))
-;	)
-;)
-
-
 (defrule initialize_path_to_empty
 	(declare (salience 11))
 	?g <- (path-request (id ?obj-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
@@ -184,7 +163,8 @@
 	(node (path-id ?id) (father-id ?fid) (node-id ?i) (node-r ?nr) (node-c ?nc) (cost-real ?cr) (cost-heur ?ch) (direction ?dir))
 	;considero anche suo padre, perché ho bisogno delle sue informazioni
 	(node (path-id ?id) (node-id ?fid) (node-r ?fatherr) (node-c ?fatherc) (direction ?fatherdir))
-	(K-cell (pos-r ?kr) (pos-c ?kc) (contains Empty))	
+	(K-cell (pos-r ?kr) (pos-c ?kc) (contains ?con))
+	(test (or (eq ?con Empty) (eq ?con Parking)))	
 	(test (or  
 		(and (= ?kr ?nr) (= ?kc (+ ?nc 1)) )
 		(and (= ?kr ?nr) (= ?kc (- ?nc 1)) )
@@ -323,7 +303,7 @@
 )
 
 (defrule cleaning_done	
-	(declare (salience 12))
+	(declare (salience 11))
 	?f <- (generate-path-steps (path-id ?id) (action clean))
 	(not (node (path-id ?id)))
 	(not (frontier (path-id ?id)))
@@ -340,18 +320,3 @@
 
 
 	)
-
-;TODO: La scelta del path migliore è ora di competenza di Strategy: riportare OGNI percorso.
-;togliere
-;(defrule choose_one_path
-;	(declare (salience 4))
-;	(K-agent (pos-r ?kr) (pos-c ?kc))
-	;TODO: aggiungere un sistema di ID per le goal position
-	; in modo da poter fare matching con i path id
-;	?f <- (obj-goal-pos (id ?goalpos-id) (pos-r ?tr) (pos-c ?tc) (solution-id nil))
-;	(path (obj-id ?gaolpos-id) (id ?id) (from-r ?kr) (from-c ?kc) (start-dir ?sdir) (cost ?c) (solution yes))
-;	(not (path (obj-id ?gaolpos-id) (from-r ?kr) (from-c ?kc) (start-dir ?sdir) (cost ?c2&:(< ?c2 ?c)) (solution yes)))
-;	=>
-;	(modify ?f (solution-id ?id))
-;	(pop-focus)
-;)

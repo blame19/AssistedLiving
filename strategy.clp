@@ -119,22 +119,7 @@
                         (assert (todo (id (+ ?id 1)) (request-time ?rqt) (step ?s) (sender ?P) (request meal) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                         (modify ?h (id (+ ?id 2)))
                 )
-                ; SPOSTATO IN MEAL EXPAND 
-                ;se l'agente ha già caricato quel tipo di pasto richiesto
-                ; (if (member$ ?meal $?con)
-                ;         then 
-                ;         (printout t "ok" clrf);OK
-                ;         else 
-                ;         (if (eq free 0)
-                ;                 then ;MAKE SPACE
-                ;                 else
-                ;                 ;GET THE MEAL
-                ;                 (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
-                ;                 (modify ?h (id (+ ?id 1)))
-                ;         )
-                ; )
-        )
-         
+        )         
         (if (eq ?request dessert)
                 then
                 (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request dessert) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
@@ -264,8 +249,11 @@
         (not (todo (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
         ; la clausola sul costo gli dà errore, al momento considera solo la FIFO (cost ?c2&:(< ?c2 ?c1))
         (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir))
-        =>        
+        => 
+        (printout t crlf crlf)
+        (printout t STRATEGY)       
         (printout t "execute todo " ?todo-id)
+        (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         (focus PATH)
         (assert (exec-todo (id ?todo-id))) 
@@ -337,6 +325,9 @@
                 then
                 (focus ACTION)
                 else
-                (printout t "errore" clrf clrf )
+                (printout t crlf crlf)
+                (printout t STRATEGY)
+                (printout t "errore: ho selezionato un todo senza path associato" )
+                (printout t crlf crlf)
         )
 )

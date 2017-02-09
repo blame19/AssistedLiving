@@ -174,25 +174,58 @@
 )	
 
 ; Fa l'update del fatto K-agent in base alle percezioni di carico ricevute e ritira quello dello step precedente
+; Si attiva dopo che è stata eseguita una LoadMeal
 (defrule update_agent_load_meal
 	(declare (salience 15))
 	?e <- (perc-load (step ?step) (load yes))
-	?f <- (K-agent (free ?fr) (content ?cont))	
+	?f <- (K-agent (free ?fr) (content $?cont))	
 	(K-exec (step ?step2) (action LoadMeal) (param1 ?posr) (param2 ?posc) (param3 ?type))
 	
 	(test (= ?step (+ ?step2 1)))	
-	=>	
-	(switch ?cont 
-		(case Empty then (modify ?f (step ?step) (free (- ?fr 1)) (content ?type) ))
-		(case dietetic then (modify ?f  (step ?step) (free (- ?fr 1)) (content ?type dietetic) ))
-		(case normal then (modify ?f  (step ?step) (free (- ?fr 1)) (content ?type normal) ))
-		(case pills then (modify ?f (step ?step) (free (- ?fr 1)) (content ?type pills) ))
-		(case dessert then (modify ?f (step ?step) (free (- ?fr 1)) (content ?type dessert) ))
-		)	
-
+	=>
+	(if (> ?fr 0)
+		then
+		( if (eq ?fr 2) 
+			then  	
+				(modify ?f (step ?step) (free (- ?fr 1)) (content ?type) )
+			else  (modify ?f (step ?step) (free (- ?fr 1)) (content (insert$ $?cont 1 ?type)) )
+			)
+		
+		else        
+		(printout t crlf crlf)
+		(printout t "AGENT")
+		(printout t "errore, Agente pieno")         
+		(printout t crlf crlf)
+	)	
 	(retract ?e)	
 )
 
+; Fa l'update del fatto K-agent in base alle percezioni di carico ricevute e ritira quello dello step precedente
+; Si attiva dopo l'esecuzione di LoadDessert
+(defrule update_agent_load_dessert
+	(declare (salience 15))
+	?e <- (perc-load (step ?step) (load yes))
+	?f <- (K-agent (free ?fr) (content $?cont))	
+	(K-exec (step ?step2) (action LoadDessert) (param1 ?posr) (param2 ?posc))
+	
+	(test (= ?step (+ ?step2 1)))	
+	=>
+	(if (> ?fr 0)
+		then
+		( if (eq ?fr 2) 
+			then  	
+				(modify ?f (step ?step) (free (- ?fr 1)) (content dessert) )
+			else  (modify ?f (step ?step) (free (- ?fr 1)) (content (insert$ $?cont 1 dessert)) )
+			)
+		
+		else        
+		(printout t crlf crlf)
+		(printout t "AGENT")
+		(printout t "errore, Agente pieno")         
+		(printout t crlf crlf)
+	)	
+	(retract ?e)	
+)
 ; Scarica un elemento (quando è l'unico caricato e viene data una perc_load)
 ;va in conflitto con la successiva
 ;(defrule update_agent_unload_all
@@ -217,10 +250,8 @@
 	(test (member$ ?p3 $?c))
 	=> 
 	(if (or (eq ?a DeliveryMeal) (eq ?a DeliveryPills) (eq ?a DeliveryDessert))  
-		then (modify ?f (step ?step)) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
+		then (modify ?f (step ?step) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
 		(modify ?g (completed yes))
-
-
 		else (printout t "do nothing")  )
 	
 )
