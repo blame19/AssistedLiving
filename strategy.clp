@@ -41,13 +41,14 @@
         (slot cost)
         (slot chosen_path)
         ;utility
+        (slot completed (default no))
         (slot expanded (default no))        
         (slot informed (default no))
         ;slot per contenere i dati dai messaggi dell'agente
+        (slot request)
         (slot request-time) 
         (slot step)
-        (slot sender) 
-        (slot request) 
+        (slot sender)          
         (slot goal_pos-r) 
         (slot goal_pos-c)
         )
@@ -87,37 +88,74 @@
 ;         (focus PATH)
 ; )
 
+(defrule completed_todo
+        (declare (salience 15))
+        ?g <- (executed-todo (todo-id ?id) )
+        ?f <- (todo (id ?id) (request ?req))
+        =>
+        (modify ?f (completed yes))
+        (printout t crlf crlf)
+        (printout t " STRATEGY" crlf)
+        (printout t " Completed todo " ?req)    
+        (printout t crlf crlf)
+        (retract ?g)
+)
+
+(defrule bump_change_todo_path
+        (declare (salience 15))
+        (K-agent (direction ?sdir) (pos-r ?r) (pos-c ?c))
+        ?f <- (bump-avoid (todo-id ?todo-id) (step ?step) (pos-r ?kr) (pos-c ?kc))
+        ?g <- (todo (id ?todo-id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (request-time ?req-time) (step ?step2) (sender ?sender))
+        ;?h <- (exec-todo (id ?todo-id))
+        ?i <- (todo-counter (id ?id))
+        =>
+        ;viene asserito un nuovo todo con nuovo id, e un nuovo fatto di tipo exec-todo con il suo id.
+        ;in questo modo si esclude il todo precedente (che viene cancellato) e si forza PATH a ricalcolare il percorso
+        (assert (todo (priority 7) (id ?id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (request-time ?req-time) (step ?step2) (sender ?sender)))
+        (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
+        ;(modify ?h (id ?id))
+        (assert (exec-todo (id ?id)))
+        (modify ?i (id (+ ?id 1)))
+        (retract ?g)
+        (retract ?f)
+        (focus PATH)
+)
+
+
+
 ;nella nuova implementazione, questo dovrebbe raccogliere i messaggi dall'agente e 
 ;fornire una lista di "azioni da fare" da ordinare poi in un piano
 (defrule todo_from_message_to_agent      
-        (declare (salience 10))
-        
+        (declare (salience 10))        
         ?g <- (msg-to-agent (request-time ?rqt) (step ?s) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc))
-        ?f <- (K-received-msg (step ?s) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc))
-        
+        ?f <- (K-received-msg (step ?s) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc))        
         (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))        
         (K-cell (pos-r ?ddisp-r) (pos-c ?ddisp-c) (contains DessertDispenser))
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
-
-
         ?h <- (todo-counter (id ?id))
         =>
         ;TODO: Considerazioni sullo stato dell'agente e sul planning
         ;(assert (to-action (step ?step) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc) (type_of_meal ?meal) (pills ?pills)))
         (if (eq ?request meal)
                 then 
-                (if (eq ?pills no)
-                        then 
+                (switch ?pills 
+                (case no then 
                         (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request meal) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                        (modify ?h (id (+ ?id 1))) 
+                )
+                (case before then 
+                        (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request meal_before) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                        (modify ?h (id (+ ?id 1)))   
+
+                )
+                (case after then   
+                        (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request meal_after) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                         (modify ?h (id (+ ?id 1)))
-                        else
-                        ;TODO pensare a come gestire before/after
-                        (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request ?pills) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
-                        (assert (todo (id (+ ?id 1)) (request-time ?rqt) (step ?s) (sender ?P) (request meal) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
-                        (modify ?h (id (+ ?id 2)))
+                )
+                        
                 )
         )         
         (if (eq ?request dessert)
@@ -132,7 +170,8 @@
         (retract ?g)
 )
 
-(defrule todo_meal_expand  
+;gestisce i todo di meal senza pillole annesse
+(defrule todo_simple_meal_expand  
         (declare (salience 10))        
         ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
@@ -140,26 +179,77 @@
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
         (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
-
-
-
         ?h <- (todo-counter (id ?id))
         =>
         ;se l'agente ha già caricato quel tipo di pasto richiesto
         (if (member$ ?meal $?con)
                 then ;OK
-                (printout t "ok" clrf)
                 (modify ?f (expanded yes))
                 else 
-                (if (eq free 0)
+                (if (eq ?free 0)
                         then 
                         ;MAKE SPACE
+                        (printout t crlf crlf)
+                        (printout t " STRATEGY" crlf)
+                        (printout t " errore: l'agente non ha spazio per caricare" )
+                        (printout t crlf crlf)
                         ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
                         (modify ?f (expanded yes))
                         else
                         ;GET THE MEAL
                         (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
                         (modify ?h (id (+ ?id 1)))
+                        (modify ?f (expanded yes))
+                )
+        )
+)
+
+
+;gestisce i todo di meal_before
+(defrule todo_meal_before_expand  
+        (declare (salience 10))        
+        ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal_before))
+        (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
+        (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
+        (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
+        (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
+        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+        ?h <- (todo-counter (id ?id))
+        =>
+        ;se l'agente ha già caricato quel tipo di pasto richiesto
+        ;TODO
+        (if (member$ ?meal $?con)
+                then ;MEAL OK - GET PILLS
+                (if (eq ?free 1)
+                        then ;SPACE OK - GET PILLS
+                        (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )
+                        (modify ?h (id (+ ?id 1)))
+                        (modify ?f (expanded yes))
+                        else
+                        ;MAKE SPACE FOR PILLS
+                        (printout t crlf crlf)
+                        (printout t " STRATEGY" crlf)
+                        (printout t " errore: l'agente non ha spazio per caricare le pillole" )
+                        (printout t crlf crlf)
+                        ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
+                        (modify ?f (expanded yes))
+                )
+                else ;NO MEAL AND NO PILLS
+                (if (< ?free 2)
+                        then 
+                        ;MAKE SPACE FOR MEAL AND PILLS
+                        (printout t crlf crlf)
+                        (printout t " STRATEGY" crlf)
+                        (printout t " errore: l'agente non ha spazio per caricare pranzo e pillole insieme" )
+                        (printout t crlf crlf)
+                        ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
+                        (modify ?f (expanded yes))
+                        else
+                        ;GET THE MEAL AND PILLS
+                        (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+                        (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )
+                        
+                        (modify ?h (id (+ ?id 2)))
                         (modify ?f (expanded yes))
                 )
         )
@@ -188,6 +278,10 @@
                         (if (eq free 0)
                                 then 
                                 ;MAKE SPACE
+                                 (printout t crlf crlf)
+                                (printout t " STRATEGY" crlf)
+                                (printout t " errore: l'agente non ha spazio per caricare" )
+                                 (printout t crlf crlf)
                                 ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo dessert
                                 (modify ?f (expanded yes))
                                 else
@@ -245,14 +339,15 @@
 ;TODO: priority / scelta delle azioni da fare. Per ora è solo un fifo, prende il TODO più vecchio
 (defrule strategy_choose_FIFO
         (declare (salience 8))
-        ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc))
-        (not (todo (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
+        ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
+        (not (todo (completed no) (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
+        (not (exec-todo (id ?todo-id)))
         ; la clausola sul costo gli dà errore, al momento considera solo la FIFO (cost ?c2&:(< ?c2 ?c1))
         (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir))
         => 
         (printout t crlf crlf)
-        (printout t STRATEGY)       
-        (printout t "execute todo " ?todo-id)
+        (printout t " STRATEGY" crlf)     
+        (printout t " execute todo " ?todo-id)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         (focus PATH)
@@ -272,50 +367,6 @@
         ; (retract ?g)
 )
 
-;SPOSTATE IN ACTION
-; ;Se è stato scelto un todo di tipo load_meal o load_dessert, l'agente deve anche effettuare l'inform necessario
-; (defrule inform_yes
-;       (declare (salience 10))
-;       (exec-todo (id ?id))
-;       (K-agent (step ?step))
-;       ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed ?info))
-;       (test (or (eq ?info no) (eq ?info wait)))
-;       =>
-;       (if (eq ?req load_meal)
-;               then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
-;                    (modify ?f (informed yes))
-;                    (pop-focus)     
-;         )
-;       (if (eq ?req load_dessert)
-;               then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
-;                    (modify ?f (informed yes))
-;                    (pop-focus)     
-;         )
-; )
-
-
-; ;Se è stato scelto un todo di un certo tipo, ma esiste anche un altro todo in attesa di tipo load_meal o dessert per qualcuno,
-; ;quella persona viene fatta attendere
-; (defrule inform_delay
-;       (declare (salience 10))
-;       (exec-todo (id ?id))
-;       (K-agent (step ?step))
-;       (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed yes))
-;       ?f <- (todo (id ?id2&:(neq ?id ?id2)) (sender ?P2) (request ?req2) (informed no))
-;       (test (or (eq ?req2 load_meal) (eq ?req2 load_dessert)))
-;       =>
-;       (if (eq ?req2 load_meal)
-;               then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 meal) (param3 wait) (param4 nil)))
-;                    (modify ?f (informed wait))
-;                    (pop-focus)     
-;         )
-;       (if (eq ?req2 load_dessert)
-;               then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 dessert) (param3 wait) (param4 nil)))
-;                    (modify ?f (informed wait))
-;                    (pop-focus)     
-;         )
-; )
-
 (defrule pass_to_action
         (declare (salience 8))
         (exec-todo (id ?todo-id))
@@ -326,8 +377,8 @@
                 (focus ACTION)
                 else
                 (printout t crlf crlf)
-                (printout t STRATEGY)
-                (printout t "errore: ho selezionato un todo senza path associato" )
+                (printout t " STRATEGY" crlf)
+                (printout t " errore: ho selezionato un todo senza path associato" )
                 (printout t crlf crlf)
         )
 )

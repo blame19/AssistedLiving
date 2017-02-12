@@ -32,9 +32,12 @@
 	(slot completed (allowed-values yes no) (default no))
 )
 
-(deftemplate proto-exec (slot step) (slot action) (slot param1) (slot param2) (slot param3) (slot param4))
+(deftemplate proto-exec (slot todo-id) (slot step) (slot action) (slot param1) (slot param2) (slot param3) (slot param4) (slot last-action (default no)))
 
 (deftemplate K-exec (slot step) (slot action) (slot param1) (slot param2) (slot param3) (slot param4))
+(deftemplate executed-todo (slot todo-id))
+
+(deftemplate bump-avoid (slot todo-id) (slot step) (slot pos-r) (slot pos-c) (slot intent))
 
 ;//_______Functions
 
@@ -122,7 +125,7 @@
 	=>
 	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
 	(assert (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
-	(focus STRATEGY)
+	;(focus STRATEGY)
 )
 
 ;Regola che si attiva all'arrivo di una richiesta di dessert.
@@ -145,7 +148,7 @@
 		;Rifiuto della richiesta perché contraria alla prescrizione 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 rejected) (param4 nil)))
 		else 
-		(focus STRATEGY)
+		;(focus STRATEGY)
 	)		
 
 )
@@ -162,6 +165,68 @@
         (modify ?f (work on))		
 		(assert (exec (step 0) (action Wait)))			
 )
+
+
+; Notifica nella finestra di dialogo che c'è stato un bump, a fini di debugging
+(defrule bump_alarm 
+	(declare (salience 14))
+	(perc-bump (time ?time) (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d) )
+	=>
+	(printout t crlf crlf)
+	(printout t " AGENT")
+	(printout t " errore, ho fatto un bump in " ?r " " ?c " andando verso " ?d)         
+	(printout t crlf crlf)
+)
+
+
+; Inizio procedura per evitare i bump
+(defrule bump_avoid_initiate_repath
+	(declare (salience 14))
+	(perc-vision (time ?time) (step ?step) (pos-r ?r) (pos-c ?c) (direction ?d) (perc1 ?perc1) (perc2 ?perc2) (perc3 ?perc3) (perc4 ?perc4) (perc6 ?perc6) (perc7 ?perc7) (perc8 ?perc8) (perc9 ?perc9))
+	(K-agent (step ?step))
+	(proto-exec (todo-id ?id) (step ?step) (action Forward))
+	?f <- (K-cell (pos-r ?kr) (pos-c ?kc) (contains ?cont))
+	(test  (eq ?perc2 PersonStanding) )
+	(test (or (and (eq ?d south) (= ?kr (- ?r 1)) (= ?kc ?c))                
+		  (and (eq ?d north) (= ?kr (+ ?r 1)) (= ?kc ?c))                
+		  (and (eq ?d east) (= ?kr ?r) (= ?kc (+ ?c 1)))                
+		  (and (eq ?d west) (= ?kr ?r) (= ?kc (- ?c 1)))
+		)                
+	)
+	=>
+	(printout t crlf crlf)
+	(printout t " AGENT")
+	(printout t " bump avoid test, bump incoming detected")         
+	(printout t crlf crlf)
+	(assert (bump-avoid (todo-id ?id) (step ?step) (pos-r ?kr) (pos-c ?kc) ))
+	(modify ?f (contains PersonStanding))
+	(focus STRATEGY)
+)
+
+; ;cerca di capire dove dovesse andare l'agente guardando alle proto-exec future
+; ;stabilisce un "intent" da raggiungere
+; ; se i calcoli divenissero troppo complessi da aggiustare, occorre un repath
+; (defrule bump_avoid_intent_forward
+; 	(declare (salience 14))
+; 	(perc-vision (time ?time) (step ?step) (pos-r ?r) (pos-c ?c) (direction ?d) (perc1 ?perc1) (perc2 ?perc2) (perc3 ?perc3) (perc4 ?perc4) (perc6 ?perc6) (perc7 ?perc7) (perc8 ?perc8) (perc9 ?perc9))
+; 	(K-agent (step ?step))
+; 	?f <- (bump-avoid (step ?step) (pos-r ?kr) (pos-c ?kc))
+; 	(proto-exec (todo-id ?id) (step (+ ?step 1)) (action Forward))
+; 	(K-cell (pos-r (+ ?kr 1))  (pos-c (+ ?kc 1)) (contains ?con1))
+; 	(K-cell (pos-r (+ ?kr 1))  (pos-c ?kc) (contains ?con2))
+; 	(K-cell (pos-r (+ ?kr 1))  (pos-c (- ?kc 1)) (contains ?con3))
+; 	(K-cell (pos-r ?kr)  (pos-c (+ ?kc 1)) (contains ?con4))
+; 	(K-cell (pos-r ?kr)  (pos-c (- ?kc 1)) (contains ?con6))
+; 	(K-cell (pos-r (- ?kr 1))  (pos-c (+ ?kc 1)) (contains ?con7))
+; 	(K-cell (pos-r (- ?kr 1))  (pos-c ?kc) (contains ?con8))
+; 	(K-cell (pos-r (- ?kr 1))  (pos-c (- ?kc 1)) (contains ?con9))
+; 	=>
+
+	
+; 	)
+; )
+
+
 
 ; Fa l'update del fatto K-agent in base alle percezioni visive ricevute e ritira quello dello step precedente
 (defrule update_agent_vision 
@@ -226,6 +291,34 @@
 	)	
 	(retract ?e)	
 )
+
+; Fa l'update del fatto K-agent in base alle percezioni di carico ricevute e ritira quello dello step precedente
+; Si attiva dopo che è stata eseguita una LoadMeal
+(defrule update_agent_load_pill
+	(declare (salience 15))
+	?e <- (perc-load (step ?step) (load yes))
+	?f <- (K-agent (free ?fr) (content $?cont))	
+	(K-exec (step ?step2) (action LoadPill) (param1 ?posr) (param2 ?posc) (param3 ?P))	
+	(test (= ?step (+ ?step2 1)))	
+	=>
+	(if (> ?fr 0)
+		then
+		( if (eq ?fr 2) 
+			then  	
+				(modify ?f (step ?step) (free (- ?fr 1)) (content ?P) )
+			else  (modify ?f (step ?step) (free (- ?fr 1)) (content (insert$ $?cont 1 ?P)) )
+			)
+		
+		else        
+		(printout t crlf crlf)
+		(printout t "AGENT")
+		(printout t "errore, Agente pieno")         
+		(printout t crlf crlf)
+	)	
+	(retract ?e)	
+)
+
+
 ; Scarica un elemento (quando è l'unico caricato e viene data una perc_load)
 ;va in conflitto con la successiva
 ;(defrule update_agent_unload_all
@@ -261,17 +354,27 @@
 (defrule assert_exec	
 	(declare (salience 12))
 	(K-agent (step ?step))
-	?f <- (proto-exec (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))
+	?f <- (proto-exec (todo-id ?id) (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4) (last-action ?value))
 	;(not (proto-exec (step ?step2&:(< ?step2 ?step1)) ))
 	=>
 	(assert (exec (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4)))
+	(if (eq ?value yes) 
+		then (assert (executed-todo (todo-id ?id)))
+	)
 	(retract ?f)
 )
 
+(defrule message_received_this_step
+	(declare (salience 1))
+	(K-received-msg (step ?step) )
+	(K-agent (step ?step))
+	=>
+	(focus STRATEGY)
+)
 
 (defrule proto_exec_finished
 (declare (salience 1))
-	(not (proto-exec))
+     (not (proto-exec))
      =>  
      (focus STRATEGY)	
 )

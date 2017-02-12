@@ -75,12 +75,12 @@
       (test (or (eq ?req load_meal) (eq ?req load_dessert)))
       =>
       (if (eq ?req load_meal)
-              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
+              then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
                    (modify ?f (informed yes))
                    (modify ?g (step (+ ?step 1)))
         )
       (if (eq ?req load_dessert)
-              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
+              then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
                    (modify ?f (informed yes))
                    (modify ?g (step (+ ?step 1)))
         )
@@ -98,12 +98,12 @@
       (test (or (eq ?req2 load_meal) (eq ?req2 load_dessert)))
       =>
       (if (eq ?req2 load_meal)
-              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 meal) (param3 wait) (param4 nil)))
+              then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P2) (param2 meal) (param3 wait) (param4 nil)))
                    (modify ?f (informed wait))
                    (modify ?g (step (+ ?step 1)))                  
         )
       (if (eq ?req2 load_dessert)
-              then (assert (proto-exec (step ?step) (action Inform) (param1 ?P2) (param2 dessert) (param3 wait) (param4 nil)))
+              then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P2) (param2 dessert) (param3 wait) (param4 nil)))
                    (modify ?f (informed wait))
                    (modify ?g (step (+ ?step 1)))                       
         )
@@ -121,19 +121,20 @@
         (test (neq ?i ?y))
         (number-of-steps (number ?max))
         (test (< ?i ?max))
+        (exec-todo (id ?id))
         =>
         (if (and (eq ?r1 ?r2) (eq ?c1 ?c2))
         	then ;TURN ROBOT
         		(switch (turn ?dir1 ?dir2)
         			(case left then 
-        				(assert (proto-exec (step ?step) (action Turnleft)))
+        				(assert (proto-exec (todo-id ?id) (step ?step) (action Turnleft)))
         				(modify ?g (step (+ ?step 1))))
         			(case right then 
-        				(assert (proto-exec (step ?step) (action Turnright)))
+        				(assert (proto-exec (todo-id ?id) (step ?step) (action Turnright)))
         				(modify ?g (step (+ ?step 1))))
         		)
         	else ;GO FORWARD
-        		(assert (proto-exec (step ?step) (action Forward)))
+        		(assert (proto-exec (todo-id ?id) (step ?step) (action Forward)))
         		(modify ?g (step (+ ?step 1)))
 
         	)
@@ -159,24 +160,29 @@
         ;(not (copy-step (path-id ?path-id) (node-id ?y&:(> ?y ?i)) (father-id ?i)))        
         =>
         (switch ?req 
-        	(case load_meal then (assert (proto-exec (step ?step) (action LoadMeal) (param1 ?gr) (param2 ?gc) (param3 ?type)))
+        	(case load_meal then (assert (proto-exec (todo-id ?id) (step ?step) (action LoadMeal) (param1 ?gr) (param2 ?gc) (param3 ?type) (last-action yes) ))
         				(modify ?g (step (+ ?step 1))))
-        	(case meal then (assert (proto-exec (step ?step) (action DeliveryMeal) (param1 ?gr) (param2 ?gc) (param3 ?type)))
+        	(case meal then (assert (proto-exec (todo-id ?id) (step ?step) (action DeliveryMeal) (param1 ?gr) (param2 ?gc) (param3 ?type) (last-action yes)))
         				(modify ?g (step (+ ?step 1))))
-        	(case load_dessert then (assert (proto-exec (step ?step) (action LoadDessert) (param1 ?gr) (param2 ?gc)))
+        	(case load_dessert then (assert (proto-exec (todo-id ?id) (step ?step) (action LoadDessert) (param1 ?gr) (param2 ?gc) (last-action yes)))
         				(modify ?g (step (+ ?step 1))))
-        	(case dessert then (assert (proto-exec (step ?step) (action DeliveryDessert) (param1 ?gr) (param2 ?gc)))
+        	(case dessert then (assert (proto-exec (todo-id ?id) (step ?step) (action DeliveryDessert) (param1 ?gr) (param2 ?gc) (last-action yes)))
         				(modify ?g (step (+ ?step 1))))
+        	(case load_pills then (assert (proto-exec (todo-id ?id) (step ?step) (action LoadPill) (param1 ?gr) (param2 ?gc) (param3 ?P) (last-action yes)))
+        				(modify ?g (step (+ ?step 1))))
+        	(case meal_before then  (assert (proto-exec (todo-id ?id) (step ?step) (action DeliveryPill) (param1 ?gr) (param2 ?gc) (param3 ?P)))
+        				(assert (proto-exec (todo-id ?id) (step (+ ?step 1)) (action DeliveryMeal) (param1 ?gr) (param2 ?gc) (param3 ?type) (last-action yes)))
+        				(modify ?g (step (+ ?step 2))))
         )
         (retract ?h)
         (retract ?k)
-        (retract ?l)
+        ;(retract ?l)
         (focus AGENT)
 )
 
 
 
-;// ACTION
+;// ACTION_OLD
 
 (defmodule ACTION_OLD (import MAIN ?ALL) (export ?ALL) (import AGENT ?ALL) (import STRATEGY ?ALL))
 
