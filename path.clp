@@ -41,7 +41,7 @@
 
 ;(deftemplate obj-goal-pos (slot id) (slot pos-r) (slot pos-c) (slot solution-id) (slot intent) (slot type))
 ;(deftemplate candidate-goal-pos (slot father-obj-id) (slot id) (slot pos-r) (slot pos-c))
-(deftemplate obj-pos (slot obj-id) (slot pos-r) (slot pos-c))
+;(deftemplate obj-pos (slot obj-id) (slot pos-r) (slot pos-c))
 ;(deftemplate goal-pos (slot father-obj-id) (slot id) (slot pos-r) (slot pos-c))
 ;
 ;(deftemplate path-step (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot direction))
@@ -94,21 +94,21 @@
 	(assert (node-counter (id 0)))
 )
 
-(defrule initialize_path_obj_pos
-	(declare (salience 13))
-	(path-request (id ?ext-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
-	(K-cell (pos-r ?tr) (pos-c ?tc))
-	; ?e <- (obj-counter (id ?obj-id))
-	; (not (obj-pos (pos-r ?tr) (pos-c ?tc)))
-	=>
-	(assert (obj-pos (obj-id ?ext-id) (pos-r ?tr) (pos-c ?tc)))
-; 	(modify ?e (id (+ ?obj-id 1)))
- )
+; (defrule initialize_path_obj_pos
+; 	(declare (salience 13))
+; 	(path-request (id ?ext-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
+; 	(K-cell (pos-r ?tr) (pos-c ?tc))
+; 	; ?e <- (obj-counter (id ?obj-id))
+; 	; (not (obj-pos (pos-r ?tr) (pos-c ?tc)))
+; 	=>
+; 	(assert (obj-pos (obj-id ?ext-id) (pos-r ?tr) (pos-c ?tc)))
+; ; 	(modify ?e (id (+ ?obj-id 1)))
+; )
 
 (defrule initialize_path_to_empty
 	(declare (salience 11))
 	?g <- (path-request (id ?obj-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
-	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
+	;(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
 	(K-cell (pos-r ?tr) (pos-c ?tc) (contains ?con))
 	(test (or (eq ?con Empty) (eq ?con Robot) (eq ?con Parking)))
 	?f <- (id-counter (id ?id))
@@ -123,7 +123,7 @@
 (defrule initialize_path_to_not_empty
 	(declare (salience 11))
 	?g <- (path-request (id ?obj-id) (from-r ?fr) (from-c ?fc) (to-r ?tr) (to-c ?tc) (start-dir ?sdir))
-	(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
+	;(obj-pos (obj-id ?obj-id) (pos-r ?tr) (pos-c ?tc))
 	(K-cell (pos-r ?tr) (pos-c ?tc) (contains ?cont))
 	(test (neq ?cont Empty))
 	?f <- (id-counter (id ?id))
