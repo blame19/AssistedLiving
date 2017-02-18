@@ -173,7 +173,7 @@
 	(perc-bump (time ?time) (step ?s) (pos-r ?r) (pos-c ?c) (direction ?d) )
 	=>
 	(printout t crlf crlf)
-	(printout t " AGENT")
+	(printout t " AGENT" crlf)
 	(printout t " errore, ho fatto un bump in " ?r " " ?c " andando verso " ?d)         
 	(printout t crlf crlf)
 )
@@ -195,8 +195,8 @@
 	)
 	=>
 	(printout t crlf crlf)
-	(printout t " AGENT")
-	(printout t " bump avoid test, bump incoming detected")         
+	(printout t " AGENT" crlf)
+	(printout t " bump detected")         
 	(printout t crlf crlf)
 	(assert (bump-avoid (todo-id ?id) (step ?step) (pos-r ?kr) (pos-c ?kc) ))
 	(modify ?f (contains PersonStanding))
@@ -311,7 +311,7 @@
 		
 		else        
 		(printout t crlf crlf)
-		(printout t "AGENT")
+		(printout t "AGENT" crlf)
 		(printout t "errore, Agente pieno")         
 		(printout t crlf crlf)
 	)	
@@ -334,18 +334,18 @@
 ;Servono le op sui multislot ...
 (defrule update_agent_unload_one
 	(declare (salience 15))		
-	?e <- (perc-load (step ?step) (load no))
+	;?e <- (perc-load (step ?step) (load no))
 	(K-exec (step ?step1) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3))
 	?f <- (K-agent (step ?step1) (content $?c) (free ?fr))
 	?g <- (K-received-msg (request ?req) (t_pos-r ?p1) (t_pos-c ?p2) (taken yes))		
 	(test (< ?fr 2))
-	(test (= ?step (+ ?step1 1)))
+	;(test (= ?step (+ ?step1 1)))
 	(test (member$ ?p3 $?c))
+	(test (or (eq ?a DeliveryMeal) (eq ?a DeliveryPill) (eq ?a DeliveryDessert)))
 	=> 
-	(if (or (eq ?a DeliveryMeal) (eq ?a DeliveryPills) (eq ?a DeliveryDessert))  
-		then (modify ?f (step ?step) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
-		(modify ?g (completed yes))
-		else (printout t "do nothing")  )
+	(modify ?f (step (+ ?step1 1)) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
+	(modify ?g (completed yes))
+	
 	
 )
 
@@ -394,10 +394,34 @@
 		
 (defrule exec_act
 	(declare (salience 2))
-    (K-agent (step ?i))
-    (exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))
-   
-   => 
-  (assert (K-exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4)))
-  (focus MAIN)
+    	(K-agent (step ?i) (pos-r ?r) (pos-c ?c) (direction ?dir))
+    	(exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))  
+   	=> 
+     	(assert (K-exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4)))
+
+     	(if (or (eq ?a DeliveryMeal) (eq ?a DeliveryPill) (eq ?a DeliveryDessert)) 
+     		then
+		(printout t crlf crlf)
+		(printout t " AGENT" crlf)
+		(printout t " Delivery Action " ?a  " at step " ?i " while I am in " ?r " & " ?c )         
+		(printout t crlf crlf)
+	)
+
+	(if (or (eq ?a LoadMeal) (eq ?a LoadDessert) (eq ?a LoadPill)) 
+     		then
+		(printout t crlf crlf)
+		(printout t " AGENT" crlf)
+		(printout t " Load Action " ?a  " at step " ?i " while I am in " ?r " & " ?c )         
+		(printout t crlf crlf)
+	)
+
+	(if (eq ?a Forward) 
+     		then
+		(printout t crlf crlf)
+		(printout t " AGENT" crlf)
+		(printout t " going forward from " ?r " & " ?c " facing " ?dir)         
+		(printout t crlf crlf)
+	)
+
+       	(focus MAIN)
 )

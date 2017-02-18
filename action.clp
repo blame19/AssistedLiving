@@ -22,6 +22,12 @@
 	=>
 	(assert (translate_path (id ?path-id)))
 	(assert (node-counter (i 0)))
+)
+
+(defrule current_step_initialize_0
+	(declare (salience 15))
+	(not (current-step-counter))
+	=>
 	(assert (current-step-counter (step 0)))
 )
 
@@ -32,6 +38,17 @@
 	(test (< ?step2 ?step))
 	=>
 	(modify ?f (step ?step))
+	)
+
+(defrule bump_step_initialize
+	(declare (salience 14))
+	(K-agent (step ?step))
+	?f <- (current-step-counter (step ?step2))
+	?g <- (action-notify (bump yes))
+	
+	=>
+	(modify ?f (step ?step))
+	(retract ?g)
 
 	)
 
@@ -144,7 +161,7 @@
 ;All'ultimo passo del percorso l'agente ha raggiunto la posizione di goal (goal_pos)
 ;può quindi eseguire l'azione che voleva fare, indicata dalla ?req nel todo
 (defrule exec-path-last-step
-	(declare (salience 10))
+	(declare (salience 9))
 	?h <- (translate_path (id ?path-id))
         ;(K-agent (step ?step) (pos-r ?r) (pos-c ?c) (direction ?sdir))
         ?f <- (node-counter (i ?i))
@@ -177,9 +194,21 @@
         (retract ?h)
         (retract ?k)
         ;(retract ?l)
-        (focus AGENT)
+        ;(focus AGENT)
 )
 
+
+(defrule purge_copy_steps
+	 ?f <- (copy-step )
+	 =>
+	 (retract ?f)
+	)
+
+(defrule go_agent
+	(not (copy-step))
+	=>
+	(focus AGENT)
+	)
 
 
 ;// ACTION_OLD

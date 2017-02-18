@@ -64,6 +64,8 @@
 
 (deftemplate todo-counter (slot id))
 
+(deftemplate action-notify (slot bump))
+
 ;//_______Rules
 
 ; (defrule TESTNEWPATH
@@ -101,6 +103,16 @@
         (retract ?g)
 )
 
+;distrugge il vecchio piano
+(defrule bump_remove_proto_exec
+        (declare (salience 16))        
+        (bump-avoid (todo-id ?todo-id) (step ?step) (pos-r ?kr) (pos-c ?kc))
+        ?f <- (proto-exec)   
+        =>
+        (assert (action-notify (bump yes)))
+        (retract ?f)
+)
+
 (defrule bump_change_todo_path
         (declare (salience 15))
         (K-agent (direction ?sdir) (pos-r ?r) (pos-c ?c))
@@ -112,7 +124,7 @@
         ;viene asserito un nuovo todo con nuovo id, e un nuovo fatto di tipo exec-todo con il suo id.
         ;in questo modo si esclude il todo precedente (che viene cancellato) e si forza PATH a ricalcolare il percorso
         (assert (todo (priority 7) (id ?id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (request-time ?req-time) (step ?step2) (sender ?sender)))
-        (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
+        (assert (path-request (id ?id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         ;(modify ?h (id ?id))
         (assert (exec-todo (id ?id)))
         (modify ?i (id (+ ?id 1)))
@@ -226,13 +238,18 @@
                         (modify ?h (id (+ ?id 1)))
                         (modify ?f (expanded yes))
                         else
-                        ;MAKE SPACE FOR PILLS
-                        (printout t crlf crlf)
-                        (printout t " STRATEGY" crlf)
-                        (printout t " errore: l'agente non ha spazio per caricare le pillole" )
-                        (printout t crlf crlf)
-                        ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
-                        (modify ?f (expanded yes))
+                        (if (member$ ?P $?con) 
+                                then ;PILLS OK ALREADY
+                                (modify ?f (expanded yes))
+                                else
+                                ;MAKE SPACE FOR PILLS
+                                (printout t crlf crlf)
+                                (printout t " STRATEGY" crlf)
+                                (printout t " errore: l'agente non ha spazio per caricare le pillole" )
+                                (printout t crlf crlf)
+                                ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
+                                (modify ?f (expanded yes))
+                        )
                 )
                 else ;NO MEAL AND NO PILLS
                 (if (< ?free 2)
