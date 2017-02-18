@@ -15,6 +15,26 @@
 
 ;//_______Rules
 
+; (defrule read_todo_initialize_0
+; 	(declare (salience 15))
+; 	(exec-todo (id ?id))
+; 	(todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req))
+; 	(not (node-counter))	
+; 	=>
+; 	(assert (translate_path (id ?path-id)))
+; 	(assert (node-counter (i 0)))
+; )
+
+; (defrule read_todo_initialize
+; 	(declare (salience 15))
+; 	(exec-todo (id ?id))
+; 	(todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req))
+; 	?f <- (node-counter)	
+; 	=>
+; 	(assert (translate_path (id ?path-id)))
+; 	(modify ?f (i 0)))
+; )
+
 (defrule read_todo_initialize
 	(declare (salience 15))
 	(exec-todo (id ?id))
@@ -127,6 +147,37 @@
 )
 
 
+; (defrule exec-path
+; 	(declare (salience 10))
+; 	(translate_path (id ?path-id))
+;         ;(K-agent (step ?step) (pos-r ?r) (pos-c ?c) (direction ?sdir))
+;         ?f <- (node-counter (i ?i))
+;         ?g <- (current-step-counter (step ?step))
+;         (copy-step (path-id ?path-id) (node-id ?i) (father-id ?fid) (node-r ?r1) (node-c ?c1) (direction ?dir1))
+;         (copy-step (path-id ?path-id) (node-id ?y) (father-id ?i) (node-r ?r2) (node-c ?c2) (direction ?dir2))
+;         (test (neq ?i ?y))
+;         (number-of-steps (number ?max))
+;         (test (< ?i ?max))
+;         (exec-todo (id ?id))
+;         =>
+;         (if (and (eq ?r1 ?r2) (eq ?c1 ?c2))
+;         	then ;TURN ROBOT
+;         		(switch (turn ?dir1 ?dir2)
+;         			(case left then 
+;         				(assert (proto-exec (todo-id ?id) (step ?step) (action Turnleft)))
+;         				(modify ?g (step (+ ?step 1))))
+;         			(case right then 
+;         				(assert (proto-exec (todo-id ?id) (step ?step) (action Turnright)))
+;         				(modify ?g (step (+ ?step 1))))
+;         		)
+;         	else ;GO FORWARD
+;         		(assert (proto-exec (todo-id ?id) (step ?step) (action Forward)))
+;         		(modify ?g (step (+ ?step 1)))
+
+;         	)
+;         (modify ?f (i (+ ?i 1)))
+; )
+
 (defrule exec-path
 	(declare (salience 10))
 	(translate_path (id ?path-id))
@@ -140,7 +191,7 @@
         (test (< ?i ?max))
         (exec-todo (id ?id))
         =>
-        (if (and (eq ?r1 ?r2) (eq ?c1 ?c2))
+        (if (neq ?dir1 ?dir2)
         	then ;TURN ROBOT
         		(switch (turn ?dir1 ?dir2)
         			(case left then 
@@ -154,9 +205,11 @@
         		(assert (proto-exec (todo-id ?id) (step ?step) (action Forward)))
         		(modify ?g (step (+ ?step 1)))
 
-        	)
+        )
         (modify ?f (i (+ ?i 1)))
 )
+
+
 
 ;All'ultimo passo del percorso l'agente ha raggiunto la posizione di goal (goal_pos)
 ;può quindi eseguire l'azione che voleva fare, indicata dalla ?req nel todo
@@ -166,11 +219,11 @@
         ;(K-agent (step ?step) (pos-r ?r) (pos-c ?c) (direction ?sdir))
         ?f <- (node-counter (i ?i))
         ?g <- (current-step-counter (step ?step))        
-        (number-of-steps (number ?max))
+        ?l <- (number-of-steps (number ?max))
         (test (= ?i ?max))
 
         ?k <- (exec-todo (id ?id))
-	?l <- (todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc))
+	(todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc))
 	(prescription (patient ?P) (meal ?type) (pills ?pills))
 
         (copy-step (path-id ?path-id) (node-id ?i) (father-id ?fid) (node-r ?r1) (node-c ?c1) (direction ?dir1))
@@ -193,7 +246,7 @@
         )
         (retract ?h)
         (retract ?k)
-        ;(retract ?l)
+        (retract ?l)
         ;(focus AGENT)
 )
 
@@ -203,6 +256,13 @@
 	 =>
 	 (retract ?f)
 	)
+
+(defrule purge_node_counter
+	 ?f <- (node-counter)
+	 =>
+	 (retract ?f)
+	)
+
 
 (defrule go_agent
 	(not (copy-step))
