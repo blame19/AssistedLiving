@@ -217,6 +217,62 @@
 )
 
 
+; ;gestisce i todo di meal_before
+; (defrule todo_meal_before_expand  
+;         (declare (salience 10))        
+;         ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal_before))
+;         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
+;         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
+;         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
+;         (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
+;         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+;         ?h <- (todo-counter (id ?id))
+;         =>
+;         ;se l'agente ha già caricato quel tipo di pasto richiesto
+;         ;TODO
+;         (if (member$ ?meal $?con)
+;                 then ;MEAL OK - GET PILLS
+;                 (if (eq ?free 1)
+;                         then ;SPACE OK - GET PILLS
+;                         (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )
+;                         (modify ?h (id (+ ?id 1)))
+;                         (modify ?f (expanded yes))
+;                         else
+;                         (if (member$ ?P $?con) 
+;                                 then ;PILLS OK ALREADY
+;                                 (modify ?f (expanded yes))
+;                                 else
+;                                 ;MAKE SPACE FOR PILLS
+;                                 (printout t crlf crlf)
+;                                 (printout t " STRATEGY" crlf)
+;                                 (printout t " errore: l'agente non ha spazio per caricare le pillole" )
+;                                 (printout t crlf crlf)
+;                                 ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
+;                                 (modify ?f (expanded yes))
+;                         )
+;                 )
+;                 else ;NO MEAL AND NO PILLS
+;                 (if (< ?free 2)
+;                         then 
+;                         ;MAKE SPACE FOR MEAL AND PILLS
+;                         (printout t crlf crlf)
+;                         (printout t " STRATEGY" crlf)
+;                         (printout t " errore: l'agente non ha spazio per caricare pranzo e pillole insieme" )
+;                         (printout t crlf crlf)
+;                         ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
+;                         (modify ?f (expanded yes))
+;                         else
+;                         ;GET THE MEAL AND PILLS
+;                         (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+;                         (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )
+                        
+;                         (modify ?h (id (+ ?id 2)))
+;                         (modify ?f (expanded yes))
+;                 )
+;         )
+; )
+
+
 ;gestisce i todo di meal_before
 (defrule todo_meal_before_expand  
         (declare (salience 10))        
@@ -230,30 +286,31 @@
         =>
         ;se l'agente ha già caricato quel tipo di pasto richiesto
         ;TODO
-        (if (member$ ?meal $?con)
-                then ;MEAL OK - GET PILLS
-                (if (eq ?free 1)
-                        then ;SPACE OK - GET PILLS
-                        (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )
-                        (modify ?h (id (+ ?id 1)))
-                        (modify ?f (expanded yes))
-                        else
+        (if (eq ?free 2)
+                then 
+                ;GET THE MEAL AND PILLS
+                (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+                (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )      
+                (modify ?h (id (+ ?id 2)))
+                (modify ?f (expanded yes))
+                else
+                (if (or (and (eq ?free 1) (member$ ?P $?con) )
+                        (and (eq ?free 1) (member$ ?meal $?con) )
+                        )
+                        then ;MEAL OR PILLS ALREADY ON - GET THE OTHER
                         (if (member$ ?P $?con) 
-                                then ;PILLS OK ALREADY
-                                (modify ?f (expanded yes))
-                                else
-                                ;MAKE SPACE FOR PILLS
-                                (printout t crlf crlf)
-                                (printout t " STRATEGY" crlf)
-                                (printout t " errore: l'agente non ha spazio per caricare le pillole" )
-                                (printout t crlf crlf)
-                                ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
+                                then ;PILLS OK GET MEAL
+                                (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+                                (modify ?h (id (+ ?id 1)))
                                 (modify ?f (expanded yes))
                         )
-                )
-                else ;NO MEAL AND NO PILLS
-                (if (< ?free 2)
-                        then 
+                        (if (member$ ?meal $?con) 
+                                then ;MEAL OK GET PILLS
+                                (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )      
+                                (modify ?h (id (+ ?id 1)))
+                                (modify ?f (expanded yes))
+                        )
+                        else ;NO SPACE FOR MEAL AND PILLS
                         ;MAKE SPACE FOR MEAL AND PILLS
                         (printout t crlf crlf)
                         (printout t " STRATEGY" crlf)
@@ -261,16 +318,64 @@
                         (printout t crlf crlf)
                         ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
                         (modify ?f (expanded yes))
-                        else
-                        ;GET THE MEAL AND PILLS
-                        (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
-                        (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )
-                        
-                        (modify ?h (id (+ ?id 2)))
-                        (modify ?f (expanded yes))
+
                 )
         )
 )
+
+
+
+;gestisce i todo di meal_after
+;NOTA: al momento uguale a meal_before ... cambia solo in action
+(defrule todo_meal_after_expand  
+      (declare (salience 10))        
+        ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal_before))
+        (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
+        (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
+        (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
+        (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
+        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+        ?h <- (todo-counter (id ?id))
+        =>
+        ;se l'agente ha già caricato quel tipo di pasto richiesto
+        ;TODO
+        (if (eq ?free 2)
+                then 
+                ;GET THE MEAL AND PILLS
+                (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+                (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )      
+                (modify ?h (id (+ ?id 2)))
+                (modify ?f (expanded yes))
+                else
+                (if (or (and (eq ?free 1) (member$ ?P $?con) )
+                        (and (eq ?free 1) (member$ ?meal $?con) )
+                        )
+                        then ;MEAL OR PILLS ALREADY ON - GET THE OTHER
+                        (if (member$ ?P $?con) 
+                                then ;PILLS OK GET MEAL
+                                (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+                                (modify ?h (id (+ ?id 1)))
+                                (modify ?f (expanded yes))
+                        )
+                        (if (member$ ?meal $?con) 
+                                then ;MEAL OK GET PILLS
+                                (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )      
+                                (modify ?h (id (+ ?id 1)))
+                                (modify ?f (expanded yes))
+                        )
+                        else ;NO SPACE FOR MEAL AND PILLS
+                        ;MAKE SPACE FOR MEAL AND PILLS
+                        (printout t crlf crlf)
+                        (printout t " STRATEGY" crlf)
+                        (printout t " errore: l'agente non ha spazio per caricare pranzo e pillole insieme" )
+                        (printout t crlf crlf)
+                        ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
+                        (modify ?f (expanded yes))
+
+                )
+        )
+)
+
 
 
 (defrule todo_dessert_expand  
@@ -310,7 +415,8 @@
                 ) 
                 else
                 ;se la persona non deve ricevere il dessert, si nega la richiesta
-                (assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 no) (param4 nil)))
+                ;(assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 no) (param4 nil)))
+                ;COMMENTATA perchè lo fa già AGENT
                 (retract ?f)
                 (pop-focus)
         ) 

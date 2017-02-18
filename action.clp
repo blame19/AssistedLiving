@@ -15,25 +15,6 @@
 
 ;//_______Rules
 
-; (defrule read_todo_initialize_0
-; 	(declare (salience 15))
-; 	(exec-todo (id ?id))
-; 	(todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req))
-; 	(not (node-counter))	
-; 	=>
-; 	(assert (translate_path (id ?path-id)))
-; 	(assert (node-counter (i 0)))
-; )
-
-; (defrule read_todo_initialize
-; 	(declare (salience 15))
-; 	(exec-todo (id ?id))
-; 	(todo (id ?id) (chosen_path ?path-id) (step ?s) (sender ?P) (request ?req))
-; 	?f <- (node-counter)	
-; 	=>
-; 	(assert (translate_path (id ?path-id)))
-; 	(modify ?f (i 0)))
-; )
 
 (defrule read_todo_initialize
 	(declare (salience 15))
@@ -243,6 +224,9 @@
         	(case meal_before then  (assert (proto-exec (todo-id ?id) (step ?step) (action DeliveryPill) (param1 ?gr) (param2 ?gc) (param3 ?P)))
         				(assert (proto-exec (todo-id ?id) (step (+ ?step 1)) (action DeliveryMeal) (param1 ?gr) (param2 ?gc) (param3 ?type) (last-action yes)))
         				(modify ?g (step (+ ?step 2))))
+        	(case meal_after then  (assert (proto-exec (todo-id ?id) (step ?step) (action DeliveryMeal) (param1 ?gr) (param2 ?gc) (param3 ?type)))
+        		(assert (proto-exec (todo-id ?id) (step (+ ?step 1)) (action DeliveryPill) (param1 ?gr) (param2 ?gc) (param3 ?P) (last-action yes)))
+        		(modify ?g (step (+ ?step 2))))
         )
         (retract ?h)
         (retract ?k)
