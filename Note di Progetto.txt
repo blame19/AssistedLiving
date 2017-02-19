@@ -1,9 +1,15 @@
-Versione del progetto 0.2
+Versione del progetto 0.23
 
 L'agente al momento gestisce richieste di pasto (dietetic e normal) e dessert con successo.
 In questa versione riesce anche a gestire le load_pill, associate con prescription Pill "before meal"
+C'é anche la routine, completamente speculare, di pills "after meal"
 Inoltre è stata inserita una routine per gestire i bump: l'agente se vede qualcuno occupare una cella davanti a lui
 e sa di dover procedere andando avanti, fa scattare una procedura che ricalcola il percorso e porta a termine il todo.
+
+Rispetto a prima ora c'é un controllo che manda il messaggio di Done quando si avvicina la scadenza temporale, in modo da evitare la penalità
+
+IMPORTANTE: vanno riviste le inform. Le WAIT pare vadano mandate solo a chi deve ricevere la pillola prima del pasto, mentre le Yes a tutti quelli che 
+	hanno diritto al pasto.  Inoltre è penalizzato mandare una seconda inform, quindi non si può passare da wait a yes.
 
 Convenzioni/ Euristiche adottate:
 	La prima azione è sempre una Wait (da cambiare)
@@ -41,7 +47,7 @@ Rimangono da modellare:
 	Quando arriva un messaggio e l'agente è occupato in un todo, dovrebbe comunque inserire un messaggio
 		di wait, in modo da ridurre le penalità
 	Gestione dei rifiuti (e obbligo di non trasportare cibo insieme ai rifiuti)
-	messaggio di "Done" (vedi consegna del progetto) e ritorno al parking
+	ritorno al parking (controllare se necessario)
 	Azioni di "riflesso" (Al momento l'agente ricalcola il path evitando l'ostacolo, nella speranza che
 				non si sposti di nuovo. Si può fare meglio? forse.)
 	Routine di "idling": che cosa fa l'agente quando non ha compiti da fare. 

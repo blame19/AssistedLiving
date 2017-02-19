@@ -37,6 +37,7 @@
 (deftemplate K-exec (slot step) (slot action) (slot param1) (slot param2) (slot param3) (slot param4))
 (deftemplate executed-todo (slot todo-id))
 
+(deftemplate max_duration (slot time))
 (deftemplate bump-avoid (slot todo-id) (slot step) (slot pos-r) (slot pos-c) (slot intent))
 
 ;//_______Functions
@@ -91,7 +92,7 @@
 
 ;//_______Rules
 
-(defrule  beginagent1
+(defrule  beginagent_1
     (declare (salience 11))
     (status (step 0))
     (not (exec (step 0)))
@@ -100,16 +101,15 @@
 	(assert (K-cell (pos-r ?r) (pos-c ?c) (contains ?x)))
 )
 
-(defrule  beginagent2
+(defrule  beginagent_2
       (declare (salience 10))
       (status (step 0))
       (not (exec (step 0)))
+      (maxduration ?d)
       (K-cell (pos-r ?r) (pos-c ?c) (contains Parking))  
-	  =>
-     (assert (K-agent (time 0) (step 0) (pos-r ?r) (pos-c ?c) (content Empty) (direction north) (free 2) (waste no)))
-	 ;linee aggiunte rispetto al codice originale, per provare il cammino verso un goal
-	 ;(assert (goal-pos (id 1) (pos-r 2) (pos-c 2)))
-	 ;(assert (goal-achieve (status false)))
+      =>
+      (assert (K-agent (time 0) (step 0) (pos-r ?r) (pos-c ?c) (content Empty) (direction north) (free 2) (waste no)))
+      (assert (max_duration (time ?d)))	
 )
 
 ;Regola che si attiva all'arrivo di una richiesta di meal.
@@ -153,14 +153,15 @@
 
 )
 
-
-
 	
 ; Ho stabilito che al primo step l'azione sia una wait, per avere le percezioni	
 (defrule ask_act_0	
- ?f <-   (status (step 0))
-    =>  (printout t crlf crlf)
-        (printout t "first action: wait to get perceptions")
+ 	?f <-   (status (step 0))
+ 	(not (exec))
+    	=>  
+    	(printout t crlf crlf)
+    	(printout t " AGENT" crlf)
+        (printout t " first action: wait to get perceptions")
         (printout t crlf crlf)
         (modify ?f (work on))		
 		(assert (exec (step 0) (action Wait)))			
@@ -364,34 +365,8 @@
 	(retract ?f)
 )
 
-(defrule message_received_this_step
-	(declare (salience 1))
-	(K-received-msg (step ?step) )
-	(K-agent (step ?step))
-	=>
-	(focus STRATEGY)
-)
 
-(defrule proto_exec_finished
-(declare (salience 1))
-     (not (proto-exec))
-     =>  
-     (focus STRATEGY)	
-)
-	
-(defrule wait_act
-	(declare (salience 0))
- ?f <-   (status (step ?i))
- (not (status (step 0)))
- ;(not (exec (step (+ ?i 1))))
-    =>  
-    	;(printout t crlf crlf)
-        ;(printout t "action to be executed at step:" ?i)
-        ;(printout t crlf crlf)
-        (modify ?f (work on))
-        (assert (exec (step ?i) (action Wait)))			
-)
-		
+;Controlla se ci sono delle exec programmate per questo step e le manda in esecuzione		
 (defrule exec_act
 	(declare (salience 2))
     	(K-agent (step ?i) (pos-r ?r) (pos-c ?c) (direction ?dir))
@@ -425,3 +400,55 @@
 
        	(focus MAIN)
 )
+
+
+;Se è stato ricevuto un messaggio, passa il controllo a Strategy per far si
+;che lo traduca in un todo
+;NOTA : la salience è più bassa di exec_act, probabilmente questa regola si attiva se non ci sono exec da fare.
+;NON è detto che vada bene.
+(defrule message_received_this_step
+	(declare (salience 1))
+	(K-received-msg (step ?step) )
+	(K-agent (step ?step))
+	=>
+	(focus STRATEGY)
+)
+
+;Se non ci sono proto_exec in lista, l'agente ripassa a Strategy perché immagina 
+;che si debba generare un altro piano
+(defrule proto_exec_finished
+	(declare (salience 1))
+     	(not (proto-exec))
+     	=>  
+    	(focus STRATEGY)	
+)
+
+; Comunica DONE quando il tempo sta per scadere
+(defrule DONE_act
+	(declare (salience 0))
+ 	?f <-   (status (step ?i) (time ?t))
+ 	(max_duration (time ?maxt))
+ 	(not (status (step 0)))
+ 	(test (> ?t (- ?maxt 20)))
+    	=>  
+    	;(printout t crlf crlf)
+        ;(printout t "action to be executed at step:" ?i)
+        ;(printout t crlf crlf)
+        (modify ?f (work on))
+        (assert (exec (step ?i) (action Done)))			
+)
+
+; Se non c'é nient'altro da fare, aspetta
+(defrule wait_act
+	(declare (salience 0))
+ ?f <-   (status (step ?i))
+ (not (status (step 0)))
+ ;(not (exec (step (+ ?i 1))))
+    =>  
+    	;(printout t crlf crlf)
+        ;(printout t "action to be executed at step:" ?i)
+        ;(printout t crlf crlf)
+        (modify ?f (work on))
+        (assert (exec (step ?i) (action Wait)))			
+)
+	
