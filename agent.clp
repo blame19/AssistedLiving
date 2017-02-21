@@ -158,7 +158,7 @@
 	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
 	(if (neq ?dessert yes) then
 		;Rifiuto della richiesta perché contraria alla prescrizione 
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 rejected) (param4 nil)))
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
 		else 
 		;(focus STRATEGY)
 	)		
@@ -216,30 +216,6 @@
 	(modify ?f (contains PersonStanding))
 	(focus STRATEGY)
 )
-
-; ;cerca di capire dove dovesse andare l'agente guardando alle proto-exec future
-; ;stabilisce un "intent" da raggiungere
-; ; se i calcoli divenissero troppo complessi da aggiustare, occorre un repath
-; (defrule bump_avoid_intent_forward
-; 	(declare (salience 14))
-; 	(perc-vision (time ?time) (step ?step) (pos-r ?r) (pos-c ?c) (direction ?d) (perc1 ?perc1) (perc2 ?perc2) (perc3 ?perc3) (perc4 ?perc4) (perc6 ?perc6) (perc7 ?perc7) (perc8 ?perc8) (perc9 ?perc9))
-; 	(K-agent (step ?step))
-; 	?f <- (bump-avoid (step ?step) (pos-r ?kr) (pos-c ?kc))
-; 	(proto-exec (todo-id ?id) (step (+ ?step 1)) (action Forward))
-; 	(K-cell (pos-r (+ ?kr 1))  (pos-c (+ ?kc 1)) (contains ?con1))
-; 	(K-cell (pos-r (+ ?kr 1))  (pos-c ?kc) (contains ?con2))
-; 	(K-cell (pos-r (+ ?kr 1))  (pos-c (- ?kc 1)) (contains ?con3))
-; 	(K-cell (pos-r ?kr)  (pos-c (+ ?kc 1)) (contains ?con4))
-; 	(K-cell (pos-r ?kr)  (pos-c (- ?kc 1)) (contains ?con6))
-; 	(K-cell (pos-r (- ?kr 1))  (pos-c (+ ?kc 1)) (contains ?con7))
-; 	(K-cell (pos-r (- ?kr 1))  (pos-c ?kc) (contains ?con8))
-; 	(K-cell (pos-r (- ?kr 1))  (pos-c (- ?kc 1)) (contains ?con9))
-; 	=>
-
-	
-; 	)
-; )
-
 
 
 ; Fa l'update del fatto K-agent in base alle percezioni visive ricevute e ritira quello dello step precedente
@@ -349,7 +325,7 @@
 	(printout t "AGENT" crlf)
 	(printout t "Caricata spazzatura")         
 	(printout t crlf crlf)    		
-	(halt)
+	
     	
 )
 
@@ -465,6 +441,14 @@
 		(printout t " AGENT" crlf)
 		(printout t " Cleaned table near " ?r " & " ?c " facing " ?dir)         
 		(printout t crlf crlf)
+	)
+	(if (eq ?a Inform) 
+     		then
+		(printout t crlf crlf)
+		(printout t " AGENT" crlf)
+		(printout t " Informing " ?p1 " of request " ?p2 " result " ?p3)         
+		(printout t crlf crlf)
+		(halt)
 	)
        	(focus MAIN)
 )

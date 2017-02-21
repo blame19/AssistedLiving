@@ -189,7 +189,7 @@
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
-        (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
+        (K-agent (step ?step) (content $?con) (free ?free) )   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         ?h <- (todo-counter (id ?id))
         =>
@@ -217,62 +217,6 @@
 )
 
 
-; ;gestisce i todo di meal_before
-; (defrule todo_meal_before_expand  
-;         (declare (salience 10))        
-;         ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal_before))
-;         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
-;         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
-;         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
-;         (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
-;         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
-;         ?h <- (todo-counter (id ?id))
-;         =>
-;         ;se l'agente ha già caricato quel tipo di pasto richiesto
-;         ;TODO
-;         (if (member$ ?meal $?con)
-;                 then ;MEAL OK - GET PILLS
-;                 (if (eq ?free 1)
-;                         then ;SPACE OK - GET PILLS
-;                         (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )
-;                         (modify ?h (id (+ ?id 1)))
-;                         (modify ?f (expanded yes))
-;                         else
-;                         (if (member$ ?P $?con) 
-;                                 then ;PILLS OK ALREADY
-;                                 (modify ?f (expanded yes))
-;                                 else
-;                                 ;MAKE SPACE FOR PILLS
-;                                 (printout t crlf crlf)
-;                                 (printout t " STRATEGY" crlf)
-;                                 (printout t " errore: l'agente non ha spazio per caricare le pillole" )
-;                                 (printout t crlf crlf)
-;                                 ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
-;                                 (modify ?f (expanded yes))
-;                         )
-;                 )
-;                 else ;NO MEAL AND NO PILLS
-;                 (if (< ?free 2)
-;                         then 
-;                         ;MAKE SPACE FOR MEAL AND PILLS
-;                         (printout t crlf crlf)
-;                         (printout t " STRATEGY" crlf)
-;                         (printout t " errore: l'agente non ha spazio per caricare pranzo e pillole insieme" )
-;                         (printout t crlf crlf)
-;                         ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
-;                         (modify ?f (expanded yes))
-;                         else
-;                         ;GET THE MEAL AND PILLS
-;                         (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
-;                         (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )
-                        
-;                         (modify ?h (id (+ ?id 2)))
-;                         (modify ?f (expanded yes))
-;                 )
-;         )
-; )
-
-
 ;gestisce i todo di meal_before
 (defrule todo_meal_before_expand  
         (declare (salience 10))        
@@ -280,7 +224,7 @@
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
-        (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
+        (K-agent (step ?step) (content $?con) (free ?free) )   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         ?h <- (todo-counter (id ?id))
         =>
@@ -333,7 +277,7 @@
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
-        (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
+        (K-agent (step ?step) (content $?con) (free ?free) )   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         ?h <- (todo-counter (id ?id))
         =>
@@ -383,7 +327,7 @@
         ?f <- (todo (expanded no) (request-time ?rqt) (completed no) (step ?s) (sender ?P) (request dessert))         
         (K-cell (pos-r ?ddisp-r) (pos-c ?ddisp-c) (contains DessertDispenser))
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
-        (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
+        (K-agent (step ?step) (content $?con) (free ?free) )   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         ?h <- (todo-counter (id ?id))
         (K-agent (step ?step))
@@ -492,7 +436,8 @@
         (not (todo (completed no) (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
         (not (exec-todo (id ?todo-id)))
         ; la clausola sul costo gli dà errore, al momento considera solo la FIFO (cost ?c2&:(< ?c2 ?c1))
-        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir))
+        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste))
+        (not (and (eq ?waste yes) (or (eq ?req load_meal) (eq ?req load_dessert) (eq ?req load_pills)  (eq ?req dessert) (eq ?req meal) (eq ?req meal_before) (eq ?req meal_after) )))
         => 
         (printout t crlf crlf)
         (printout t " STRATEGY" crlf)     
