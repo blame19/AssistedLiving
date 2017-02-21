@@ -32,6 +32,14 @@
 	(slot completed (allowed-values yes no) (default no))
 )
 
+(deftemplate K-table
+	(slot t_pos-r)
+	(slot t_pos-c)
+	(slot clean (allowed-values yes no))
+	(slot meal_delivered_at_time)
+)
+
+
 (deftemplate proto-exec (slot todo-id) (slot step) (slot action) (slot param1) (slot param2) (slot param3) (slot param4) (slot last-action (default no)))
 
 (deftemplate K-exec (slot step) (slot action) (slot param1) (slot param2) (slot param3) (slot param4))
@@ -99,6 +107,10 @@
     (prior-cell (pos-r ?r) (pos-c ?c) (contains ?x)) 
 	=>
 	(assert (K-cell (pos-r ?r) (pos-c ?c) (contains ?x)))
+	(if (eq ?x Table) 
+		then 
+		(assert (K-table (t_pos-r ?r) (t_pos-c ?c) (clean yes)) )
+	)
 )
 
 (defrule  beginagent_2
@@ -177,6 +189,7 @@
 	(printout t " AGENT" crlf)
 	(printout t " errore, ho fatto un bump in " ?r " " ?c " andando verso " ?d)         
 	(printout t crlf crlf)
+	(halt)
 )
 
 
@@ -262,6 +275,7 @@
 		(printout t "AGENT")
 		(printout t "errore, Agente pieno")         
 		(printout t crlf crlf)
+		(halt)
 	)	
 	(retract ?e)	
 )
@@ -289,6 +303,7 @@
 		(printout t "AGENT")
 		(printout t "errore, Agente pieno")         
 		(printout t crlf crlf)
+		(halt)
 	)	
 	(retract ?e)	
 )
@@ -315,8 +330,27 @@
 		(printout t "AGENT" crlf)
 		(printout t "errore, Agente pieno")         
 		(printout t crlf crlf)
+		(halt)
 	)	
 	(retract ?e)	
+)
+
+(defrule update_agent_load_trash
+	(declare (salience 15))
+	;(perc-load (step ?step) (load yes))
+    	?f <- (K-agent (step ?step) )
+    	?g <- (K-table (t_pos-r ?tr) (t_pos-c ?tc) (clean no))
+    	(K-exec (step ?step2) (action CleanTable) (param1 ?tr) (param2 ?tc) (param3 ?p3) (param4 ?p4))
+    	(test (= ?step (+ ?step2 1)))	
+    	=>
+    	(modify ?f (step ?step) (waste yes) ) 
+    	(modify ?g (clean yes))
+    	(printout t crlf crlf)
+	(printout t "AGENT" crlf)
+	(printout t "Caricata spazzatura")         
+	(printout t crlf crlf)    		
+	(halt)
+    	
 )
 
 
@@ -346,10 +380,17 @@
 	=> 
 	(modify ?f (step (+ ?step1 1)) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
 	(modify ?g (completed yes))
-	
-	
 )
 
+
+(defrule update_agent_unload_trash
+	(declare (salience 15))	
+	(K-exec (step ?step1) (action ReleaseTrash) (param1 ?p1) (param2 ?p2) (param3 ?p3))
+	?f <- (K-agent (step ?step1) (waste yes))	
+	;(test (= ?step (+ ?step1 1)))
+	=> 
+	(modify ?f (step (+ ?step1 1)) (waste no) )
+)
 
 ;Trasforma una proto-exec in una exec
 (defrule assert_exec	
@@ -365,15 +406,27 @@
 	(retract ?f)
 )
 
+(defrule update_table_dirty
+	(declare (salience 3))
+    	(K-agent (step ?i) (time ?time) (pos-r ?r) (pos-c ?c) (direction ?dir))
+    	(exec (step ?i) (action DeliveryMeal) (param1 ?tr) (param2 ?tc) (param3 ?p3) (param4 ?p4))
+    	(K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)) 
+    	?f <- (K-table (t_pos-r ?tr) (t_pos-c ?tc) (clean yes))
+    	=>
+    	(modify ?f (clean no) (meal_delivered_at_time ?time) )
+)
+
+
 
 ;Controlla se ci sono delle exec programmate per questo step e le manda in esecuzione		
 (defrule exec_act
 	(declare (salience 2))
     	(K-agent (step ?i) (pos-r ?r) (pos-c ?c) (direction ?dir))
-    	(exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))  
+    	(exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))    	
    	=> 
      	(assert (K-exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4)))
 
+     	;Stampe a console
      	(if (or (eq ?a DeliveryMeal) (eq ?a DeliveryPill) (eq ?a DeliveryDessert)) 
      		then
 		(printout t crlf crlf)
@@ -398,6 +451,21 @@
 		(printout t crlf crlf)
 	)
 
+	(if (eq ?a EmptyRobot) 
+     		then
+		(printout t crlf crlf)
+		(printout t " AGENT" crlf)
+		(printout t " Emptied Robot Trash in " ?r " & " ?c " facing " ?dir)         
+		(printout t crlf crlf)
+	)
+
+	(if (eq ?a CleanTable) 
+     		then
+		(printout t crlf crlf)
+		(printout t " AGENT" crlf)
+		(printout t " Cleaned table near " ?r " & " ?c " facing " ?dir)         
+		(printout t crlf crlf)
+	)
        	(focus MAIN)
 )
 
@@ -414,18 +482,18 @@
 	(focus STRATEGY)
 )
 
-;Se non ci sono proto_exec in lista, l'agente ripassa a Strategy perché immagina 
-;che si debba generare un altro piano
-(defrule proto_exec_finished
-	(declare (salience 1))
-     	(not (proto-exec))
-     	=>  
-    	(focus STRATEGY)	
-)
+; ;Se non ci sono proto_exec in lista, l'agente ripassa a Strategy perché immagina 
+; ;che si debba generare un altro piano
+; (defrule proto_exec_finished
+; 	(declare (salience 1))
+;      	(not (proto-exec))
+;      	=>  
+;     	(focus STRATEGY)	
+; )
 
 ; Comunica DONE quando il tempo sta per scadere
 (defrule DONE_act
-	(declare (salience 0))
+	(declare (salience 1))
  	?f <-   (status (step ?i) (time ?t))
  	(max_duration (time ?maxt))
  	(not (status (step 0)))
@@ -439,16 +507,23 @@
 )
 
 ; Se non c'é nient'altro da fare, aspetta
-(defrule wait_act
-	(declare (salience 0))
- ?f <-   (status (step ?i))
- (not (status (step 0)))
- ;(not (exec (step (+ ?i 1))))
-    =>  
-    	;(printout t crlf crlf)
-        ;(printout t "action to be executed at step:" ?i)
-        ;(printout t crlf crlf)
-        (modify ?f (work on))
-        (assert (exec (step ?i) (action Wait)))			
+; (defrule wait_act
+; 	(declare (salience 0))
+;  ?f <-   (status (step ?i))
+;  (not (status (step 0)))
+;  ;(not (exec (step (+ ?i 1))))
+;     =>  
+;     	;(printout t crlf crlf)
+;         ;(printout t "action to be executed at step:" ?i)
+;         ;(printout t crlf crlf)
+;         (modify ?f (work on))
+;         (assert (exec (step ?i) (action Wait)))			
+; )
+; 	
+
+(defrule nothing_else_todo
+ 	(declare (salience 0))
+      
+      	=>  
+     	(focus STRATEGY)	
 )
-	

@@ -47,7 +47,7 @@
 ;(deftemplate path-step (slot path-id) (slot node-id) (slot father-id) (slot node-r) (slot node-c) (slot direction))
 
 ;id che viene assegnato agli obj-pos
-(deftemplate obj-counter (slot id))		
+;(deftemplate obj-counter (slot id))		
 ;id che viene assegnato ai path
 (deftemplate id-counter (slot id))
 
@@ -80,12 +80,12 @@
 	(assert (id-counter (id 0)))
 )
 
-(defrule initialize_obj_count 
-	(declare (salience 15))
-	(not (obj-counter (id ?id)))
-	=>
-	(assert (obj-counter (id 0)))
-)
+; (defrule initialize_obj_count 
+; 	(declare (salience 15))
+; 	(not (obj-counter (id ?id)))
+; 	=>
+; 	(assert (obj-counter (id 0)))
+; )
 
 (defrule initialize_node_count 
 	(declare (salience 15))

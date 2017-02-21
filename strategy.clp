@@ -185,7 +185,7 @@
 ;gestisce i todo di meal senza pillole annesse
 (defrule todo_simple_meal_expand  
         (declare (salience 10))        
-        ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal))
+        ?f <- (todo (expanded no) (request-time ?rqt) (completed no) (step ?s) (sender ?P) (request meal))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
@@ -203,10 +203,10 @@
                         ;MAKE SPACE
                         (printout t crlf crlf)
                         (printout t " STRATEGY" crlf)
-                        (printout t " errore: l'agente non ha spazio per caricare" )
+                        (printout t " WARNING: l'agente non ha spazio per caricare" )
                         (printout t crlf crlf)
                         ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
-                        (modify ?f (expanded yes))
+                        ;(modify ?f (expanded yes))
                         else
                         ;GET THE MEAL
                         (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
@@ -276,7 +276,7 @@
 ;gestisce i todo di meal_before
 (defrule todo_meal_before_expand  
         (declare (salience 10))        
-        ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal_before))
+        ?f <- (todo (expanded no) (request-time ?rqt) (completed no) (step ?s) (sender ?P) (request meal_before))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
@@ -314,10 +314,10 @@
                         ;MAKE SPACE FOR MEAL AND PILLS
                         (printout t crlf crlf)
                         (printout t " STRATEGY" crlf)
-                        (printout t " errore: l'agente non ha spazio per caricare pranzo e pillole insieme" )
+                        (printout t " WARNING: l'agente non ha spazio per caricare pranzo e pillole insieme" )
                         (printout t crlf crlf)
                         ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
-                        (modify ?f (expanded yes))
+                        ;(modify ?f (expanded yes))
 
                 )
         )
@@ -329,7 +329,7 @@
 ;NOTA: al momento uguale a meal_before ... cambia solo in action
 (defrule todo_meal_after_expand  
       (declare (salience 10))        
-        ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request meal_before))
+        ?f <- (todo (expanded no) (request-time ?rqt) (completed no) (step ?s) (sender ?P) (request meal_after))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
@@ -367,10 +367,10 @@
                         ;MAKE SPACE FOR MEAL AND PILLS
                         (printout t crlf crlf)
                         (printout t " STRATEGY" crlf)
-                        (printout t " errore: l'agente non ha spazio per caricare pranzo e pillole insieme" )
+                        (printout t " WARNING: l'agente non ha spazio per caricare pranzo e pillole insieme" )
                         (printout t crlf crlf)
                         ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
-                        (modify ?f (expanded yes))
+                        ;(modify ?f (expanded yes))
 
                 )
         )
@@ -380,7 +380,7 @@
 
 (defrule todo_dessert_expand  
         (declare (salience 10))        
-        ?f <- (todo (expanded no) (request-time ?rqt) (step ?s) (sender ?P) (request dessert))         
+        ?f <- (todo (expanded no) (request-time ?rqt) (completed no) (step ?s) (sender ?P) (request dessert))         
         (K-cell (pos-r ?ddisp-r) (pos-c ?ddisp-c) (contains DessertDispenser))
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
         (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
@@ -402,10 +402,10 @@
                                 ;MAKE SPACE
                                  (printout t crlf crlf)
                                 (printout t " STRATEGY" crlf)
-                                (printout t " errore: l'agente non ha spazio per caricare" )
+                                (printout t " WARNING: l'agente non ha spazio per caricare il dessert" )
                                  (printout t crlf crlf)
                                 ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo dessert
-                                (modify ?f (expanded yes))
+                                ;(modify ?f (expanded yes))
                                 else
                                 ;GET THE DESSERT
                                 (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_dessert) (goal_pos-r ?ddisp-r) (goal_pos-c ?ddisp-c)) )
@@ -420,6 +420,32 @@
                 (retract ?f)
                 (pop-focus)
         ) 
+)
+
+
+(defrule todo_clean_table
+        (declare (salience 11))   
+        (K-agent (step ?step) (time ?time))
+        (K-table (t_pos-r ?tr) (t_pos-c ?tc) (clean no) (meal_delivered_at_time ?time2))
+        (test (> ?time (+ 50 ?time2)))
+        (not (todo (request clean_table) (completed no) (goal_pos-r ?tr) (goal_pos-c ?tc)))
+        ?h <- (todo-counter (id ?id))
+        =>
+        (assert (todo (id ?id) (priority 6) (request-time ?time) (step ?step) (sender nil) (request clean_table) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+        (modify ?h (id (+ ?id 1)))
+                                 
+)
+
+;gestisce i todo di meal senza pillole annesse
+(defrule todo_empty_trash
+        (declare (salience 11))        
+        (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
+        (K-agent (step ?step) (waste yes) (time ?time))
+        (not (todo (request empty_trash) (completed no) (goal_pos-r ?tr) (goal_pos-c ?tc)))   
+        ?h <- (todo-counter (id ?id))        
+        =>
+        (assert (todo (id ?id) (priority 6) (request-time ?time) (step ?step) (sender nil) (request empty_trash) (goal_pos-r ?trash-r) (goal_pos-c ?trash-c)) )
+        (modify ?h (id (+ ?id 1)))    
 )
 
 
@@ -470,7 +496,7 @@
         => 
         (printout t crlf crlf)
         (printout t " STRATEGY" crlf)     
-        (printout t " execute todo " ?todo-id)
+        (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         (focus PATH)
@@ -505,3 +531,12 @@
                 (printout t crlf crlf)
         )
 )
+
+(defrule no_todo_then_wait
+        (declare (salience 0))
+        (K-agent (step ?i))       
+        =>
+         (assert (exec (step ?i) (action Wait)))        
+                (focus AGENT)
+)
+

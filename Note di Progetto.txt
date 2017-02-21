@@ -1,15 +1,12 @@
-Versione del progetto 0.23
+Versione del progetto 0.3
 
 L'agente al momento gestisce richieste di pasto (dietetic e normal) e dessert con successo.
 In questa versione riesce anche a gestire le load_pill, associate con prescription Pill "before meal"
-C'é anche la routine, completamente speculare, di pills "after meal"
-Inoltre è stata inserita una routine per gestire i bump: l'agente se vede qualcuno occupare una cella davanti a lui
-e sa di dover procedere andando avanti, fa scattare una procedura che ricalcola il percorso e porta a termine il todo.
+C'é anche la routine, completamente speculare, di pills "after meal".
 
-Rispetto a prima ora c'é un controllo che manda il messaggio di Done quando si avvicina la scadenza temporale, in modo da evitare la penalità
-
-IMPORTANTE: vanno riviste le inform. Le WAIT pare vadano mandate solo a chi deve ricevere la pillola prima del pasto, mentre le Yes a tutti quelli che 
-	hanno diritto al pasto.  Inoltre è penalizzato mandare una seconda inform, quindi non si può passare da wait a yes.
+Riviste le inform: vengono ora inviate YES se la richiesta può essere soddisfatta, WAIT solo se è un pasto e l'anziano deve prendere prima le pilole.
+Aggiunta una prima versione della gestione della pulizia. Ancora incompleta (vedi "da modellare").
+L'agente comunque pulisce i tavoli  e butta via la spazzatura.
 
 Convenzioni/ Euristiche adottate:
 	La prima azione è sempre una Wait (da cambiare)
@@ -20,6 +17,9 @@ Convenzioni/ Euristiche adottate:
 	altre richieste.
 	
 	La strategia è una FIFO. 
+	
+	I todo clean-table vengono generati 50 unità temporali DOPO che il pasto è stato consegnato. 
+		Dovrebbero essere sufficienti a evitare che l'agente tolga il pasto al vecchio (lol)
 	
 	Le Inform_yes vengono sempre mandate prima di caricare pasti o dessert, 
 		in modo da ridurre (idealmente) il tempo di penalità.
@@ -37,17 +37,16 @@ Rimangono da testare:
 	Gestione richieste multiple 
 		ad esempio se ci sono due load, con dispenser vicini, spazio permettendo l'agente 
 		dovrebbe eseguire PRIMA le load e poi le consegne. Teoricamente dovrebbe succedere.
-	Le Inform_wait non sono ancora state testate, sebbene ci sia una regola apposita.
 
 
 Rimangono da modellare:
+	Rivedere le inform_rejected, perché credo non vengano inviate correttamente
 	Aggiungere il costo della singola azione, oltre che al costo del path, all'interno del todo.
-	delivery di pills_after
-	pulizia del tavolo
 	Quando arriva un messaggio e l'agente è occupato in un todo, dovrebbe comunque inserire un messaggio
 		di wait, in modo da ridurre le penalità
-	Gestione dei rifiuti (e obbligo di non trasportare cibo insieme ai rifiuti)
-	ritorno al parking (controllare se necessario)
+	Rivedere il sistema delle priorità, che al momento non è ottimale, anzi. 
+	Obbligo di non trasportare cibo insieme ai rifiuti
+	ritorno al parking (probabilmente non è necessario)
 	Azioni di "riflesso" (Al momento l'agente ricalcola il path evitando l'ostacolo, nella speranza che
 				non si sposti di nuovo. Si può fare meglio? forse.)
 	Routine di "idling": che cosa fa l'agente quando non ha compiti da fare. 
