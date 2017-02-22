@@ -47,6 +47,7 @@
 
 (deftemplate max_duration (slot time))
 (deftemplate bump-avoid (slot todo-id) (slot step) (slot pos-r) (slot pos-c) (slot intent))
+(deftemplate proto-exec-reorder (slot reorder-step))
 
 ;//_______Functions
 
@@ -125,10 +126,10 @@
 )
 
 ;Regola che si attiva all'arrivo di una richiesta di meal.
-;Delega al ACTION la gestione della richiesta
+;Manda subito l'inform, poi strategy si occuperà di come e quando portarla a termine
 ;Salva inoltre una copia della richiesta in K-received-msg: la memoria dell'agente sui messaggi passati
 (defrule on_meal_req_received
-	(declare (salience 10))
+	(declare (salience 14))
 	(msg-to-agent (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc))
 	(prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
 	(status (step ?i))
@@ -137,16 +138,23 @@
 	=>
 	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
 	(assert (K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)))
-	;(focus STRATEGY)
+	(if (eq ?pills before) 
+		then
+		;Inform di Wait 
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 meal) (param3 wait) (param4 nil)))
+		else
+		;Inform di Ok 
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
+	)
+	(halt)
 )
 
 ;Regola che si attiva all'arrivo di una richiesta di dessert.
-;Delega al ACTION la gestione della richiesta SE:
-; 1) è previsto che il paziente possa avere il dessert
-; 2) TODO: all'agente risulta che il paziente abbia già consumato il meal 
+;Manda subito l'inform, poi strategy si occuperà di come e quando portarla a termine
 ;Salva inoltre una copia della richiesta in K-received-msg: la memoria dell'agente sui messaggi passati
+;TODO : GESTIRE I CASI DI DESSERT WAIT
 (defrule on_dessert_req_received
-	(declare (salience 10))
+	(declare (salience 14))
 	(msg-to-agent (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
 	(prescription (patient ?P) (pills ?pills) (dessert ?dessert))
 	;(consumed-meal (patient ?P)) condizione da aggiungere: se un paziente ha finito di mangiare il suo pranzo, riceve il dessert
@@ -156,12 +164,14 @@
 	=>	
 	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
 	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
-	(if (neq ?dessert yes) then
+	(if (eq ?dessert yes) then
+		;Accetto la richiesta
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
+		else 
 		;Rifiuto della richiesta perché contraria alla prescrizione 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
-		else 
-		;(focus STRATEGY)
-	)		
+	)
+	(halt)		
 
 )
 
@@ -324,22 +334,8 @@
     	(printout t crlf crlf)
 	(printout t "AGENT" crlf)
 	(printout t "Caricata spazzatura")         
-	(printout t crlf crlf)    		
-	
-    	
+	(printout t crlf crlf)    	
 )
-
-
-; Scarica un elemento (quando è l'unico caricato e viene data una perc_load)
-;va in conflitto con la successiva
-;(defrule update_agent_unload_all
-;	(declare (salience 15))
-;	?e <- (perc-load (step ?step) (load no))
-;	?f <- (K-agent (free 1))
-;	=> 
-;	(modify ?f (step ?step) (content Empty) (free 2))
-;	(retract ?e)
-;)
 
 ; Sceglie l'elemento da scaricare nella lista
 ;Servono le op sui multislot ...
@@ -369,17 +365,65 @@
 )
 
 ;Trasforma una proto-exec in una exec
+;a meno che non ci siano già delle exec stabilite per questo turno, come delle inform
 (defrule assert_exec	
 	(declare (salience 12))
 	(K-agent (step ?step))
 	?f <- (proto-exec (todo-id ?id) (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4) (last-action ?value))
-	;(not (proto-exec (step ?step2&:(< ?step2 ?step1)) ))
+	(not (exec (step ?step) ))
 	=>
 	(assert (exec (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4)))
 	(if (eq ?value yes) 
 		then (assert (executed-todo (todo-id ?id)))
 	)
 	(retract ?f)
+)
+
+;Manda in exec un'exec già presente - come nel caso delle inform
+;aggiora eventuali azioni proto-exec programmate aumentando il contatore di step
+(defrule assert_exec_proto-exec_conflict	
+	(declare (salience 12))
+	(K-agent (step ?step))
+	(exec (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))
+	?f <- (proto-exec (todo-id ?id) (step ?step) )
+	;?g <- (proto-exec (todo-id ?id) (step ?step1) )
+	;(test (> ?step1 ?step))	
+	=>
+	(assert (proto-exec-reorder))
+	;(modify ?f (step (+ ?step 1)))
+	;(modify ?g (step (+ ?step1 1)))	
+)
+
+(defrule proto-exec_order_fix_init	
+	(declare (salience 12))
+	?h <- (proto-exec-reorder (reorder-step nil))
+	?f <- (proto-exec (todo-id ?id) (step ?step) )
+	(not (proto-exec (todo-id ?id) (step ?step1&:(> ?step1 ?step))))
+	;(test (> ?step1 ?step))	
+	=>
+	(modify ?h (reorder-step ?step))
+	;(modify ?g (step (+ ?step1 1)))	
+)
+
+(defrule proto-exec_order_fix	
+	(declare (salience 12))
+	(K-agent (step ?step))
+	?h <- (proto-exec-reorder (reorder-step ?rs))
+	(test (and (neq ?rs nil) (neq ?rs (- ?step 1) ) ))
+	?f <- (proto-exec (todo-id ?id) (step ?rs) )	
+	;(test (> ?step1 ?step))	
+	=>	
+	(modify ?f (step (+ ?rs 1)))
+	(modify ?h (reorder-step (- ?rs 1)))
+)
+
+(defrule proto-exec_order_clean
+	(declare (salience 12))
+	(K-agent (step ?step))
+	?h <- (proto-exec-reorder (reorder-step ?rs))
+	(test (eq ?rs (- ?step 1) ) )
+	=>
+	(retract ?h)
 )
 
 (defrule update_table_dirty
@@ -391,7 +435,6 @@
     	=>
     	(modify ?f (clean no) (meal_delivered_at_time ?time) )
 )
-
 
 
 ;Controlla se ci sono delle exec programmate per questo step e le manda in esecuzione		
@@ -409,6 +452,7 @@
 		(printout t " AGENT" crlf)
 		(printout t " Delivery Action " ?a  " at step " ?i " while I am in " ?r " & " ?c )         
 		(printout t crlf crlf)
+
 	)
 
 	(if (or (eq ?a LoadMeal) (eq ?a LoadDessert) (eq ?a LoadPill)) 
@@ -447,8 +491,7 @@
 		(printout t crlf crlf)
 		(printout t " AGENT" crlf)
 		(printout t " Informing " ?p1 " of request " ?p2 " result " ?p3)         
-		(printout t crlf crlf)
-		(halt)
+		(printout t crlf crlf)		
 	)
        	(focus MAIN)
 )

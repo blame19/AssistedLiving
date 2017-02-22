@@ -130,33 +130,34 @@
 ;         )
 ; )
 
-;NUOVE INFORM
-(defrule inform_yes_and_wait
-      (declare (salience 14))
-      (exec-todo (id ?id))
-      ?g <- (current-step-counter (step ?step))
-      ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed no))      
-      (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
-      (test (or (eq ?req load_meal) (eq ?req load_dessert)))
-      =>
-      (if (eq ?req load_meal)
-              then (if (eq ?pills before)  
-              		then 
-              		(assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 wait) (param4 nil)))
-                   	(modify ?f (informed yes))
-                   	(modify ?g (step (+ ?step 1)))
-              	   	else
-              	   	(assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
-                   	(modify ?f (informed yes))
-                   	(modify ?g (step (+ ?step 1)))
-              	   )              	   
-        )
-       (if (eq ?req load_dessert)
-              then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
-                   (modify ?f (informed yes))
-                   (modify ?g (step (+ ?step 1)))
-        )
-)
+;SPOSTATE IN AGENT PER POTER RISPONDERE SUBITO
+; ;NUOVE INFORM
+; (defrule inform_yes_and_wait
+;       (declare (salience 14))
+;       (exec-todo (id ?id))
+;       ?g <- (current-step-counter (step ?step))
+;       ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed no))      
+;       (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+;       (test (or (eq ?req load_meal) (eq ?req load_dessert)))
+;       =>
+;       (if (eq ?req load_meal)
+;               then (if (eq ?pills before)  
+;               		then 
+;               		(assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 wait) (param4 nil)))
+;                    	(modify ?f (informed yes))
+;                    	(modify ?g (step (+ ?step 1)))
+;               	   	else
+;               	   	(assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
+;                    	(modify ?f (informed yes))
+;                    	(modify ?g (step (+ ?step 1)))
+;               	   )              	   
+;         )
+;        (if (eq ?req load_dessert)
+;               then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
+;                    (modify ?f (informed yes))
+;                    (modify ?g (step (+ ?step 1)))
+;         )
+; )
 
 
 
