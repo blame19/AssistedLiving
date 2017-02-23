@@ -418,15 +418,33 @@
 
 ; )
 
-;Stima dei costi con la manhattan distance invece di un path calcolato completamente
-;TODO: Aggiungere costi delle azioni 
-(defrule todo_cost_estimate_manhattan
+; ;Stima dei costi con la manhattan distance invece di un path calcolato completamente
+; (defrule todo_cost_estimate_manhattan
+;         (declare (salience 10))
+;         ?f <- (todo (id ?todo-id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (cost nil))
+;         (K-agent (pos-r ?r) (pos-c ?c))
+;         =>
+;         (modify ?f (cost (manhattan ?r ?c ?gr ?gc)) )
+; )
+
+;Miglioramento della stima precedente;
+;nello specifico alla manhattan dist viene aggiunto il costo in tempo delle singole azioni richieste.
+(defrule todo_cost_estimate_manhattan_action
         (declare (salience 10))
         ?f <- (todo (id ?todo-id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (cost nil))
-        (K-agent (pos-r ?r) (pos-c ?c))
         =>
-        (modify ?f (cost (manhattan ?r ?c ?gr ?gc)) )
-
+        (switch ?req 
+                (case load_dessert then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10)) ))
+                (case load_pills then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10)) ))
+                (case load_meal then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 15)) ))
+                (case meal then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 12)) ))
+                (case meal_before then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 22)) ))
+                (case meal_after then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 22)) ))
+                (case dessert then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10)) ))
+                (case clean_table then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 30)) ))
+                (case empty_trash then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10)) ))
+        )
+       
 )
 
 

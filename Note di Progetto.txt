@@ -41,7 +41,7 @@ Rimangono da testare:
 
 Rimangono da modellare:
 	Aggiungere i casi di Dessert Wait, che da specifica devono avvenire quando il paziente ha meal_after (quindi deve ricevere il dolce dopo le pillole)
-	Aggiungere il costo della singola azione, oltre che al costo del path, all'interno del todo.
+	Modellare il comportamento in caso di agente pieno.
 	Rivedere il sistema delle priorità, che al momento non è ottimale, anzi. Da sostituire con eventuali "gruppi" di todo relazionate
 	ritorno al parking (probabilmente non è necessario)
 	Azioni di "riflesso" (Al momento l'agente ricalcola il path evitando l'ostacolo, nella speranza che
