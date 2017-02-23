@@ -28,6 +28,7 @@ Convenzioni/ Euristiche adottate:
 		essere fatte sempre prima.
 		Le azioni generate dopo un bump - in altre parole, il ricalcolo del percorso -
 		sono a priorità 7, al momento precedenti a tutte le altre.
+		Le azioni di clean sono a 11. Le empty trash a 6.
 	
 	
 

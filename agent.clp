@@ -18,6 +18,7 @@
 	(multislot content)
 	(slot free)
     (slot waste)
+    (slot penalty)
 )
 
 (deftemplate K-received-msg 
@@ -121,7 +122,7 @@
       (maxduration ?d)
       (K-cell (pos-r ?r) (pos-c ?c) (contains Parking))  
       =>
-      (assert (K-agent (time 0) (step 0) (pos-r ?r) (pos-c ?c) (content Empty) (direction north) (free 2) (waste no)))
+      (assert (K-agent (time 0) (step 0) (pos-r ?r) (pos-c ?c) (content Empty) (direction north) (free 2) (waste no) (penalty 0)))
       (assert (max_duration (time ?d)))	
 )
 
@@ -146,7 +147,7 @@
 		;Inform di Ok 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
 	)
-	(halt)
+	;(halt)
 )
 
 ;Regola che si attiva all'arrivo di una richiesta di dessert.
@@ -171,7 +172,7 @@
 		;Rifiuto della richiesta perché contraria alla prescrizione 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
 	)
-	(halt)		
+	;(halt)		
 
 )
 
@@ -199,7 +200,7 @@
 	(printout t " AGENT" crlf)
 	(printout t " errore, ho fatto un bump in " ?r " " ?c " andando verso " ?d)         
 	(printout t crlf crlf)
-	(halt)
+	;(halt)
 )
 
 
@@ -220,13 +221,32 @@
 	=>
 	(printout t crlf crlf)
 	(printout t " AGENT" crlf)
-	(printout t " bump detected")         
+	(printout t " bump detected while i am in " ?kr " & " ?kc)         
 	(printout t crlf crlf)
 	(assert (bump-avoid (todo-id ?id) (step ?step) (pos-r ?kr) (pos-c ?kc) ))
 	(modify ?f (contains PersonStanding))
 	(focus STRATEGY)
 )
 
+
+(defrule update_agent_penalty
+	  (declare (salience 15))
+	  ?f <- (K-agent (step ?step) (time ?time) (penalty ?p1))
+	  (penalty ?p2)
+	  (test (neq ?p1 ?p2))
+	  (test (neq ?p2 nil))
+	  =>
+	  (modify ?f (penalty ?p2))
+	  (if (> ?p2 (+ 200 ?p1))  then 
+	  	(printout t crlf crlf)
+		(printout t " AGENT" crlf)
+		(printout t " PENALTY SKY-ROCKETED: something bad happened at step " ?step " an time " ?time crlf)  
+		(printout t " penalty increased by " (- ?p2 ?p1) )       
+		(printout t crlf crlf)
+		(halt)
+	)
+
+)
 
 ; Fa l'update del fatto K-agent in base alle percezioni visive ricevute e ritira quello dello step precedente
 (defrule update_agent_vision 
@@ -332,8 +352,8 @@
     	(modify ?f (step ?step) (waste yes) ) 
     	(modify ?g (clean yes))
     	(printout t crlf crlf)
-	(printout t "AGENT" crlf)
-	(printout t "Caricata spazzatura")         
+	(printout t " AGENT" crlf)
+	(printout t " Caricata spazzatura")         
 	(printout t crlf crlf)    	
 )
 
@@ -440,7 +460,7 @@
 ;Controlla se ci sono delle exec programmate per questo step e le manda in esecuzione		
 (defrule exec_act
 	(declare (salience 2))
-    	(K-agent (step ?i) (pos-r ?r) (pos-c ?c) (direction ?dir))
+    	(K-agent (step ?i) (time ?time) (pos-r ?r) (pos-c ?c) (direction ?dir))
     	(exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))    	
    	=> 
      	(assert (K-exec (step ?i) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4)))
@@ -450,7 +470,7 @@
      		then
 		(printout t crlf crlf)
 		(printout t " AGENT" crlf)
-		(printout t " Delivery Action " ?a  " at step " ?i " while I am in " ?r " & " ?c )         
+		(printout t " Delivery Action " ?a  " at step " ?i " while I am in " ?r " & " ?c " in time " ?time)         
 		(printout t crlf crlf)
 
 	)
@@ -459,17 +479,17 @@
      		then
 		(printout t crlf crlf)
 		(printout t " AGENT" crlf)
-		(printout t " Load Action " ?a  " at step " ?i " while I am in " ?r " & " ?c )         
+		(printout t " Load Action " ?a  " at step " ?i " while I am in " ?r " & " ?c " in time " ?time)         
 		(printout t crlf crlf)
 	)
 
-	(if (eq ?a Forward) 
-     		then
-		(printout t crlf crlf)
-		(printout t " AGENT" crlf)
-		(printout t " going forward from " ?r " & " ?c " facing " ?dir)         
-		(printout t crlf crlf)
-	)
+	; (if (eq ?a Forward) 
+ ;     		then
+	; 	(printout t crlf crlf)
+	; 	(printout t " AGENT" crlf)
+	; 	(printout t " going forward from " ?r " & " ?c " facing " ?dir)         
+	; 	(printout t crlf crlf)
+	; )
 
 	(if (eq ?a EmptyRobot) 
      		then
@@ -483,7 +503,7 @@
      		then
 		(printout t crlf crlf)
 		(printout t " AGENT" crlf)
-		(printout t " Cleaned table near " ?r " & " ?c " facing " ?dir)         
+		(printout t " Cleaned table near " ?r " & " ?c " facing " ?dir " in time " ?time)         
 		(printout t crlf crlf)
 	)
 	(if (eq ?a Inform) 

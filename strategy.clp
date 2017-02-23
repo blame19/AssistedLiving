@@ -370,12 +370,14 @@
 (defrule todo_clean_table
         (declare (salience 11))   
         (K-agent (step ?step) (time ?time))
+        (max_duration (time ?maxt))
         (K-table (t_pos-r ?tr) (t_pos-c ?tc) (clean no) (meal_delivered_at_time ?time2))
-        (test (> ?time (+ 50 ?time2)))
+        ;(test (or (< (- ?maxt ?time) 50)  (> ?time (+ 500 ?time2)) ))
+        (test (> ?time (+ 500 ?time2)) )
         (not (todo (request clean_table) (completed no) (goal_pos-r ?tr) (goal_pos-c ?tc)))
         ?h <- (todo-counter (id ?id))
         =>
-        (assert (todo (id ?id) (priority 6) (request-time ?time) (step ?step) (sender nil) (request clean_table) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+        (assert (todo (id ?id) (priority 11) (request-time ?time) (step ?step) (sender nil) (request clean_table) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
         (modify ?h (id (+ ?id 1)))
                                  
 )
