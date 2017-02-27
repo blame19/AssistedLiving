@@ -65,6 +65,7 @@
 (deftemplate todo-counter (slot id))
 
 (deftemplate action-notify (slot bump))
+(deftemplate now-serving (slot person))
 
 ;//_______Rules
 
@@ -453,9 +454,10 @@
 ;TODO: priority / scelta delle azioni da fare. Per ora è solo un fifo, prende il TODO più vecchio
 (defrule strategy_choose_FIFO_agent_free
         (declare (salience 8))
+        (not (now-serving))
         ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
         (not (todo (completed no) (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
-        (not (exec-todo (id ?todo-id)))
+        (not (exec-todo ))
         ; la clausola sul costo gli dà errore, al momento considera solo la FIFO (cost ?c2&:(< ?c2 ?c1))
         (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free ?free))
         (test (not (and (eq ?waste yes) (or (eq ?req load_meal) (eq ?req load_dessert) (eq ?req load_pills)  (eq ?req dessert) (eq ?req meal) (eq ?req meal_before) (eq ?req meal_after) ))) )
@@ -466,16 +468,18 @@
         (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
+        (if (neq ?P nil) then (assert (now-serving (person ?P))))
         (focus PATH)
         (assert (exec-todo (id ?todo-id))) 
 )
 
 ;TODO: priority / scelta delle azioni da fare. Per ora è solo un fifo, prende il TODO più vecchio
 (defrule strategy_choose_FIFO_agent_not_free
-        (declare (salience 8))        
+        (declare (salience 8))
+        (not (now-serving))        
         ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
         ;(not (todo (completed no) (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
-        (not (exec-todo (id ?todo-id)))
+        (not (exec-todo))
         ; la clausola sul costo gli dà errore, al momento considera solo la FIFO (cost ?c2&:(< ?c2 ?c1))
         (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free 0))
         (test (and (neq ?req load_meal) (neq ?req load_dessert) (neq ?req load_pills)  (neq ?req clean_table) ))
@@ -487,7 +491,63 @@
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         (focus PATH)
         (assert (exec-todo (id ?todo-id))) 
-)      
+)
+
+;TODO: priority / scelta delle azioni da fare. Per ora è solo un fifo, prende il TODO più vecchio
+(defrule strategy_choose_person_agent_free
+        (declare (salience 8))
+
+        (now-serving (person ?P))
+        ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
+        (not (todo (completed no)  (sender ?P) (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
+        (not (exec-todo)) 
+        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free ?free))
+        (test (not (and (eq ?waste yes) (or (eq ?req load_meal) (eq ?req load_dessert) (eq ?req load_pills)  (eq ?req dessert) (eq ?req meal) (eq ?req meal_before) (eq ?req meal_after) ))) )
+        (test (> ?free 0))
+        ; la clausola sul costo gli dà errore, al momento considera solo la FIFO (cost ?c2&:(< ?c2 ?c1))
+        
+        => 
+        (printout t crlf crlf)
+        (printout t " STRATEGY" crlf)     
+        (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
+        (printout t crlf crlf)
+        (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
+        (if (neq ?P nil) then (assert (now-serving (person ?P))))
+        (focus PATH)
+        (assert (exec-todo (id ?todo-id))) 
+)
+
+;TODO: priority / scelta delle azioni da fare. Per ora è solo un fifo, prende il TODO più vecchio
+(defrule strategy_choose_person_agent_not_free
+        (declare (salience 8))
+        (now-serving (person ?P))  
+        ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
+        (not (exec-todo ))
+        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free 0))
+        (test (and (neq ?req load_meal) (neq ?req load_dessert) (neq ?req load_pills)  (neq ?req clean_table) ))
+        => 
+        (printout t crlf crlf)
+        (printout t " STRATEGY" crlf)     
+        (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
+        (printout t crlf crlf)
+        (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
+        (focus PATH)
+        (assert (exec-todo (id ?todo-id))) 
+)
+
+(defrule finished_serving
+        (declare (salience 9))
+        ?f <- (now-serving (person ?P))
+        (not  (todo (sender ?P) (completed no) ))
+        =>
+         (printout t crlf crlf)
+        (printout t " STRATEGY" crlf)     
+        (printout t " retracting now-serving fact for " ?P)
+        (printout t crlf crlf)
+        (retract ?f)
+
+)
+
 
 
 (defrule choose_best_path
