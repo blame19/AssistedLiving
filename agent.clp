@@ -167,7 +167,11 @@
 	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
 	(if (eq ?dessert yes) then
 		;Accetto la richiesta
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
+		(if (eq ?pills after) then 
+			(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 wait) (param4 nil)))
+			else
+			(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil))) 
+		)
 		else 
 		;Rifiuto della richiesta perché contraria alla prescrizione 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
