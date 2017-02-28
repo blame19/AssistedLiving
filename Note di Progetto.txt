@@ -17,11 +17,9 @@ Convenzioni/ Euristiche adottate:
 	
 	La strategia è una FIFO. 
 	
-	I todo clean-table vengono generati 50 unità temporali DOPO che il pasto è stato consegnato. 
-		Dovrebbero essere sufficienti a evitare che l'agente tolga il pasto al vecchio (lol).
-		Da progetto servono 500 unità temporali dopo la consegna, ma questo al momento non è modellato
-	
-	Le Inform_yes vengono sempre mandate SUBITO.
+	I todo clean-table vengono generati 501 unità temporali DOPO che il pasto è stato consegnato. 
+
+	Le Inform vengono sempre mandate SUBITO.
 
 	Nella generazione dei todo, tutti i todo hanno una priorità 10, eccetto
 		le azioni di load - priorità 9. Di conseguenza le load dovrebbero
@@ -29,6 +27,10 @@ Convenzioni/ Euristiche adottate:
 		Le azioni generate dopo un bump - in altre parole, il ricalcolo del percorso -
 		sono a priorità 7, al momento precedenti a tutte le altre.
 		Le azioni di clean sono a 11. Le empty trash a 6.
+	
+	Vengono generati dei fatti now-serving person P, dove P è la persona da servire. 
+		Quando si inizia a servire qualcuno (es, pasto + pillole) l'agente ignora il resto.
+		questo per evitare che confonda le consegne.
 	
 	
 
@@ -40,10 +42,11 @@ Rimangono da testare:
 
 
 Rimangono da modellare:
+	Differenziare i casi di clean table:
+		probabilmente si possono fare se l'anziano ha richiesto il dessert
+		per qualche motivo non va bene la tempistica
 	Aggiungere i casi di Dessert Wait, che da specifica devono avvenire quando il paziente ha meal_after (quindi deve ricevere il dolce dopo le pillole)
-	Modellare il comportamento in caso di agente pieno.
-	Rivedere il sistema delle priorità, che al momento non è ottimale, anzi. Da sostituire con eventuali "gruppi" di todo relazionate
-	ritorno al parking (probabilmente non è necessario)
+
 	Azioni di "riflesso" (Al momento l'agente ricalcola il path evitando l'ostacolo, nella speranza che
 				non si sposti di nuovo. Si può fare meglio? forse.)
 	Routine di "idling": che cosa fa l'agente quando non ha compiti da fare. 

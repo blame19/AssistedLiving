@@ -452,12 +452,14 @@
 
 (defrule update_table_dirty
 	(declare (salience 3))
-    	(K-agent (step ?i) (time ?time) (pos-r ?r) (pos-c ?c) (direction ?dir))
-    	(exec (step ?i) (action DeliveryMeal) (param1 ?tr) (param2 ?tc) (param3 ?p3) (param4 ?p4))
+	(status (step ?i) (time ?t))
+    	(K-agent (step ?i) (pos-r ?r) (pos-c ?c) (direction ?dir))
+    	(exec (step ?j) (action DeliveryMeal) (param1 ?tr) (param2 ?tc) (param3 ?p3) (param4 ?p4))
+    	(test (= (+ ?j 1) ?i))
     	(K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)) 
     	?f <- (K-table (t_pos-r ?tr) (t_pos-c ?tc) (clean yes))
     	=>
-    	(modify ?f (clean no) (meal_delivered_at_time ?time) )
+    	(modify ?f (clean no) (meal_delivered_at_time ?t) )
 )
 
 
@@ -546,13 +548,15 @@
 (defrule DONE_act
 	(declare (salience 1))
  	?f <-   (status (step ?i) (time ?t))
+ 	(K-agent (pos-r ?r) (pos-c ?c))
  	(max_duration (time ?maxt))
  	(not (status (step 0)))
- 	(test (> ?t (- ?maxt 20)))
+ 	(test (> ?t (- ?maxt 31)))
     	=>  
-    	;(printout t crlf crlf)
-        ;(printout t "action to be executed at step:" ?i)
-        ;(printout t crlf crlf)
+    	(printout t crlf crlf)
+	(printout t " AGENT" crlf)
+	(printout t " Sending DONE message while in " ?r " & " ?c )         
+	(printout t crlf crlf)	
         (modify ?f (work on))
         (assert (exec (step ?i) (action Done)))			
 )

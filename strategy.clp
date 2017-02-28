@@ -374,12 +374,16 @@
         (max_duration (time ?maxt))
         (K-table (t_pos-r ?tr) (t_pos-c ?tc) (clean no) (meal_delivered_at_time ?time2))
         ;(test (or (< (- ?maxt ?time) 50)  (> ?time (+ 500 ?time2)) ))
-        (test (> ?time (+ 500 ?time2)) )
+        (test (and (> ?time (+ 501 ?time2)) (neq ?time2 nil)) )
         (not (todo (request clean_table) (completed no) (goal_pos-r ?tr) (goal_pos-c ?tc)))
         ?h <- (todo-counter (id ?id))
         =>
         (assert (todo (id ?id) (priority 11) (request-time ?time) (step ?step) (sender nil) (request clean_table) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
         (modify ?h (id (+ ?id 1)))
+        (printout t crlf crlf)
+        (printout t " STRATEGY" crlf)
+        (printout t " Asserted CLEAN TABLE " ?tr " & " ?tc " at time " ?time)
+        (printout t crlf crlf)
                                  
 )
 

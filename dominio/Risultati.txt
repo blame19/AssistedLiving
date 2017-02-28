@@ -1,0 +1,2 @@
+Piccola_mappa_standard_1 			penalty 460
+Media_history_sequenziale_2200 		penalty 660
