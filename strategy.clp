@@ -143,11 +143,10 @@
         ?g <- (msg-to-agent (request-time ?rqt) (step ?s) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc))
         ?f <- (K-received-msg (step ?s) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc))        
         (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
-        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert yes))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))        
         (K-cell (pos-r ?ddisp-r) (pos-c ?ddisp-c) (contains DessertDispenser))
-        (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
         ?h <- (todo-counter (id ?id))
         =>
         ;TODO: Considerazioni sullo stato dell'agente e sul planning

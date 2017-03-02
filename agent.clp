@@ -646,7 +646,7 @@
 
 ; (defrule test_HALT_debug
 ; 	(declare (salience 100))
-; 	(K-agent (step 410))
+; 	(K-agent (step 439))
 ; 	=>
 ; 	(halt)
 ; 	)
