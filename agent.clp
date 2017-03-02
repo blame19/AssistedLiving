@@ -38,8 +38,12 @@
 	(slot t_pos-c)
 	(slot clean (allowed-values yes no))
 	(slot meal_delivered_at_time)
+	(slot meal_delivered_at_person)
 )
 
+(deftemplate K-pill-delivered
+	(slot person)
+)
 
 (deftemplate proto-exec (slot todo-id) (slot step) (slot action) (slot param1) (slot param2) (slot param3) (slot param4) (slot last-action (default no)))
 
@@ -153,12 +157,12 @@
 ;Regola che si attiva all'arrivo di una richiesta di dessert.
 ;Manda subito l'inform, poi strategy si occuperà di come e quando portarla a termine
 ;Salva inoltre una copia della richiesta in K-received-msg: la memoria dell'agente sui messaggi passati
-;TODO : GESTIRE I CASI DI DESSERT WAIT
-(defrule on_dessert_req_received
+
+(defrule on_dessert_req_received_generic
 	(declare (salience 14))
 	(msg-to-agent (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
 	(prescription (patient ?P) (pills ?pills) (dessert ?dessert))
-	;(consumed-meal (patient ?P)) condizione da aggiungere: se un paziente ha finito di mangiare il suo pranzo, riceve il dessert
+	(test (neq ?pills after))
 	(status (step ?i))
 	(test (= ?s ?i))	
 	(not (K-received-msg (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
@@ -176,9 +180,55 @@
 		;Rifiuto della richiesta perché contraria alla prescrizione 
 		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
 	)
-	;(halt)		
-
 )
+
+;specializzazione della regola sovrastante, si attiva solo nei casi di pill after nella prescription
+;e se le pillole non sono state ancora consegnate
+(defrule on_dessert_req_received_pills_after_dessert_wait
+	(declare (salience 14))
+	(msg-to-agent (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
+	(prescription (patient ?P) (pills after) (dessert ?dessert))
+	;se non gli sono state consegnate le pillole, deve attendere per il dessert
+	(not (K-pill-delivered (person ?P)))
+	(status (step ?i))
+	(test (= ?s ?i))	
+	(not (K-received-msg (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+	=>	
+	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
+	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+	(if (eq ?dessert yes) then
+		;Accetto la richiesta
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 wait) (param4 nil)))			
+		else 
+		;Rifiuto della richiesta perché contraria alla prescrizione 
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
+	)
+)
+
+;specializzazione della regola sovrastante, si attiva solo nei casi di pill after nella prescription
+;e se le pillole sono state giù consegnate
+(defrule on_dessert_req_received_pills_after_dessert_yes
+	(declare (salience 14))
+	(msg-to-agent (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc))
+	(prescription (patient ?P) (pills after) (dessert ?dessert))
+	(K-pill-delivered (person ?P))
+	(status (step ?i))
+	(test (= ?s ?i))	
+	(not (K-received-msg (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+	=>	
+	;aggiungo il messaggio alla lista dei ricevuti (e già esaminati)
+	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
+	(if (eq ?dessert yes) then
+		;Accetto la richiesta
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil))) 
+		
+		else 
+		;Rifiuto della richiesta perché contraria alla prescrizione 
+		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
+	)
+)
+
+
 
 	
 ; Ho stabilito che al primo step l'azione sia una wait, per avere le percezioni	
@@ -302,11 +352,14 @@
 	=>
 	(if (> ?fr 0)
 		then
-		( if (eq ?fr 2) 
-			then  	
-				(modify ?f (step ?step) (free (- ?fr 1)) (content dessert) )
-			else  (modify ?f (step ?step) (free (- ?fr 1)) (content (insert$ $?cont 1 dessert)) )
-			)
+		(modify ?f (step ?step) (free (- ?fr 1)) (content (insert$ $?cont 1 dessert)) )
+		(printout t crlf crlf)
+		(printout t " AGENT" crlf)
+		(printout t " __________________" crlf)
+		(printout t " CARICATO UN DESSERT ")     
+
+		(printout t " __________________" crlf)    
+		(printout t crlf crlf)
 		
 		else        
 		(printout t crlf crlf)
@@ -362,8 +415,8 @@
 )
 
 ; Sceglie l'elemento da scaricare nella lista
-;Servono le op sui multislot ...
-(defrule update_agent_unload_one
+; La regola agisce su pill e meals
+(defrule update_agent_unload_pill_or_meal
 	(declare (salience 15))		
 	;?e <- (perc-load (step ?step) (load no))
 	(K-exec (step ?step1) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3))
@@ -372,10 +425,31 @@
 	(test (< ?fr 2))
 	;(test (= ?step (+ ?step1 1)))
 	(test (member$ ?p3 $?c))
-	(test (or (eq ?a DeliveryMeal) (eq ?a DeliveryPill) (eq ?a DeliveryDessert)))
+	(test (or (eq ?a DeliveryMeal) (eq ?a DeliveryPill)))
 	=> 
 	(modify ?f (step (+ ?step1 1)) (content (delete-member$ $?c ?p3)) (free (+ ?fr 1)))
+	(if  (eq ?a DeliveryPill) 
+		then (assert (K-pill-delivered (person ?p3)))
+	)		
+	(modify ?g (completed yes))	
+)
+
+; Sceglie l'elemento da scaricare nella lista
+; La regola agisce su desserts
+(defrule update_agent_unload_dessert
+	(declare (salience 15))		
+	;?e <- (perc-load (step ?step) (load no))
+	(K-exec (step ?step1) (action DeliveryDessert) (param1 ?p1) (param2 ?p2))
+	?f <- (K-agent (step ?step1) (content $?c) (free ?fr))
+	?g <- (K-received-msg (request ?req) (t_pos-r ?p1) (t_pos-c ?p2) (taken yes))		
+	(test (< ?fr 2))
+	;(test (= ?step (+ ?step1 1)))
+	(test (member$ dessert $?c))	
+	=> 
+	(modify ?f (step (+ ?step1 1)) (content (delete-member$ $?c dessert)) (free (+ ?fr 1)))		
 	(modify ?g (completed yes))
+; 	(printout t "DESSERT UNLOADED")
+; 	(halt)	
 )
 
 
@@ -456,7 +530,7 @@
     	(K-agent (step ?i) (pos-r ?r) (pos-c ?c) (direction ?dir))
     	(exec (step ?j) (action DeliveryMeal) (param1 ?tr) (param2 ?tc) (param3 ?p3) (param4 ?p4))
     	(test (= (+ ?j 1) ?i))
-    	(K-received-msg (step ?s) (sender ?P) (request meal) (t_pos-r ?tr) (t_pos-c ?tc)) 
+    	
     	?f <- (K-table (t_pos-r ?tr) (t_pos-c ?tc) (clean yes))
     	=>
     	(modify ?f (clean no) (meal_delivered_at_time ?t) )
@@ -478,6 +552,7 @@
 		(printout t " AGENT" crlf)
 		(printout t " Delivery Action " ?a  " at step " ?i " while I am in " ?r " & " ?c " in time " ?time)         
 		(printout t crlf crlf)
+		;(if (eq ?a DeliveryDessert) then (halt) )
 
 	)
 
@@ -511,6 +586,7 @@
 		(printout t " AGENT" crlf)
 		(printout t " Cleaned table near " ?r " & " ?c " facing " ?dir " in time " ?time)         
 		(printout t crlf crlf)
+		
 	)
 	(if (eq ?a Inform) 
      		then
@@ -561,24 +637,16 @@
         (assert (exec (step ?i) (action Done)))			
 )
 
-; Se non c'é nient'altro da fare, aspetta
-; (defrule wait_act
-; 	(declare (salience 0))
-;  ?f <-   (status (step ?i))
-;  (not (status (step 0)))
-;  ;(not (exec (step (+ ?i 1))))
-;     =>  
-;     	;(printout t crlf crlf)
-;         ;(printout t "action to be executed at step:" ?i)
-;         ;(printout t crlf crlf)
-;         (modify ?f (work on))
-;         (assert (exec (step ?i) (action Wait)))			
-; )
-; 	
-
 (defrule nothing_else_todo
  	(declare (salience 0))
       
       	=>  
      	(focus STRATEGY)	
 )
+
+; (defrule test_HALT_debug
+; 	(declare (salience 100))
+; 	(K-agent (step 410))
+; 	=>
+; 	(halt)
+; 	)

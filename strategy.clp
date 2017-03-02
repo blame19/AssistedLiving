@@ -193,6 +193,8 @@
         (K-agent (step ?step) (content $?con) (free ?free) )   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         ?h <- (todo-counter (id ?id))
+
+        (test (or (> ?free 0) (and (eq ?free 0) (member$ ?meal $?con)) ) )
         =>
         ;se l'agente ha già caricato quel tipo di pasto richiesto
         (if (member$ ?meal $?con)
@@ -228,6 +230,7 @@
         (K-agent (step ?step) (content $?con) (free ?free) )   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         ?h <- (todo-counter (id ?id))
+         (test (or (eq ?free 2) (and (eq ?free 1) (or (member$ ?P $?con) (member$ ?meal $?con)) ) ))
         =>
         ;se l'agente ha già caricato quel tipo di pasto richiesto
         ;TODO
@@ -238,6 +241,8 @@
                 (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )      
                 (modify ?h (id (+ ?id 2)))
                 (modify ?f (expanded yes))
+
+       
                 else
                 (if (or (and (eq ?free 1) (member$ ?P $?con) )
                         (and (eq ?free 1) (member$ ?meal $?con) )
@@ -281,6 +286,7 @@
         (K-agent (step ?step) (content $?con) (free ?free) )   
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         ?h <- (todo-counter (id ?id))
+        (test (or (eq ?free 2) (and (eq ?free 1) (or (member$ ?P $?con) (member$ ?meal $?con)) ) ))
         =>
         ;se l'agente ha già caricato quel tipo di pasto richiesto
         ;TODO
@@ -329,15 +335,12 @@
         (K-cell (pos-r ?ddisp-r) (pos-c ?ddisp-c) (contains DessertDispenser))
         (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
         (K-agent (step ?step) (content $?con) (free ?free) )   
-        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert yes))
         ?h <- (todo-counter (id ?id))
         (K-agent (step ?step))
         =>
-        ;se nella prescrizione c'è scritto che la persona specificata può ricevere il dessert
-        (if (eq ?dessert yes) 
-                then
-                ;se la persona ha diritto a quel dessert
-                (if (member$ dessert $?con)
+        ;se la persona ha diritto a quel dessert
+        (if (member$ dessert $?con)
                         then ;OK
                         (printout t "ok" clrf)
                         (modify ?f (expanded yes))
@@ -357,18 +360,31 @@
                                 (modify ?h (id (+ ?id 1)))
                                 (modify ?f (expanded yes))
                         )  
-                ) 
-                else
-                ;se la persona non deve ricevere il dessert, si nega la richiesta
-                ;(assert (proto-exec (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 no) (param4 nil)))
-                ;COMMENTATA perchè lo fa già AGENT
-                (retract ?f)
-                (pop-focus)
         ) 
+             
+         
 )
 
+(defrule todo_clean_table_dessert_requested
+        (declare (salience 11))   
+        (K-agent (step ?step) (time ?time))
+        (K-table (t_pos-r ?tr) (t_pos-c ?tc) (clean no) (meal_delivered_at_time ?mdt))
+        (test (neq ?mdt nil))
+        (K-received-msg (t_pos-r ?tr) (t_pos-c ?tc) (sender ?P) (request dessert)) 
+        (not (todo (request clean_table) (completed no) (goal_pos-r ?tr) (goal_pos-c ?tc)))
+        ?h <- (todo-counter (id ?id))
+        =>
+        (assert (todo (id ?id) (priority 11) (request-time ?time) (step ?step) (sender nil) (request clean_table) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+        (modify ?h (id (+ ?id 1)))
+        (printout t crlf crlf)
+        (printout t " STRATEGY" crlf)
+        (printout t " Asserted CLEAN TABLE " ?tr " & " ?tc " at time " ?time " for dessert request")
+        (printout t crlf crlf)
+       
+                                 
+)
 
-(defrule todo_clean_table
+(defrule todo_clean_table_meal_duration
         (declare (salience 11))   
         (K-agent (step ?step) (time ?time))
         (max_duration (time ?maxt))
@@ -590,3 +606,11 @@
                 (focus AGENT)
 )
 
+
+; (defrule test_HALT_debug
+;         (declare (salience 100))
+;         ;(todo (sender ?P))
+;         (now-serving (person P6))
+;         =>
+;         (halt)
+;         )
