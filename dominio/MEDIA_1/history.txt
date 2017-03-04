@@ -1,4 +1,4 @@
-; distanze
+; Media seconda 
 (maxduration 2100)
 
 (initpersonpos
@@ -110,17 +110,17 @@
 (event (step 2) (type meal) (person P4))
 (event (step 3) (type meal) (person P7))
 
-(event (step 100) (type meal) (person P8))
-(event (step 101) (type meal) (person P12))
-(event (step 102) (type meal) (person P9))
+(event (step 200) (type meal) (person P8))
+(event (step 201) (type meal) (person P12))
+(event (step 202) (type meal) (person P9))
 
-(event (step 300) (type meal) (person P6))
-(event (step 301) (type meal) (person P2))
-(event (step 302) (type dessert) (person P7))
+(event (step 450) (type meal) (person P6))
+(event (step 451) (type meal) (person P2))
+(event (step 452) (type dessert) (person P7))
 
-(event (step 400) (type dessert) (person P8))
-(event (step 401) (type dessert) (person P12))
-(event (step 402) (type dessert) (person P9))
+(event (step 570) (type dessert) (person P8))
+(event (step 571) (type dessert) (person P12))
+(event (step 572) (type dessert) (person P9))
 
 ;(personmove(step 47)(ident P10)(path-id P100))
 ;(personmove(step 150)(ident P7)(path-id P70))

@@ -65,7 +65,7 @@
 (deftemplate todo-counter (slot id))
 
 (deftemplate action-notify (slot bump))
-(deftemplate now-serving (slot person))
+(deftemplate now-serving (slot time) (slot person))
 
 ;//_______Rules
 
@@ -143,36 +143,34 @@
         ?g <- (msg-to-agent (request-time ?rqt) (step ?s) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc))
         ?f <- (K-received-msg (step ?s) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc))        
         (K-agent (step ?step) (content $?con) (free ?free) (waste ?waste))   
-        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert yes))
+        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dess))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
         (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))        
         (K-cell (pos-r ?ddisp-r) (pos-c ?ddisp-c) (contains DessertDispenser))
         ?h <- (todo-counter (id ?id))
         =>
-        ;TODO: Considerazioni sullo stato dell'agente e sul planning
-        ;(assert (to-action (step ?step) (sender ?P) (request ?request) (t_pos-r ?tr) (t_pos-c ?tc) (type_of_meal ?meal) (pills ?pills)))
         (if (eq ?request meal)
                 then 
                 (switch ?pills 
                 (case no then 
-                        (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request meal) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                        (assert (todo (id ?id) (step ?s) (sender ?P) (request meal) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                         (modify ?h (id (+ ?id 1))) 
                 )
                 (case before then 
-                        (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request meal_before) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                        (assert (todo (id ?id)  (step ?s) (sender ?P) (request meal_before) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                         (modify ?h (id (+ ?id 1)))   
 
                 )
                 (case after then   
-                        (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request meal_after) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                        (assert (todo (id ?id) (step ?s) (sender ?P) (request meal_after) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                         (modify ?h (id (+ ?id 1)))
                 )
                         
                 )
         )         
-        (if (eq ?request dessert)
+        (if (and (eq ?request dessert) (eq ?dess yes))
                 then
-                (assert (todo (id ?id) (request-time ?rqt) (step ?s) (sender ?P) (request dessert) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                (assert (todo (id ?id) (step ?s) (sender ?P) (request dessert) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                 (modify ?h (id (+ ?id 1)))
         )
 
@@ -375,11 +373,10 @@
         =>
         (assert (todo (id ?id) (priority 11) (request-time ?time) (step ?step) (sender nil) (request clean_table) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
         (modify ?h (id (+ ?id 1)))
-        (printout t crlf crlf)
-        (printout t " STRATEGY" crlf)
-        (printout t " Asserted CLEAN TABLE " ?tr " & " ?tc " at time " ?time " for dessert request")
-        (printout t crlf crlf)
-       
+        ; (printout t crlf crlf)
+        ; (printout t " STRATEGY" crlf)
+        ; (printout t " Asserted CLEAN TABLE " ?tr " & " ?tc " at time " ?time " for dessert request")
+        ; (printout t crlf crlf)       
                                  
 )
 
@@ -394,12 +391,7 @@
         ?h <- (todo-counter (id ?id))
         =>
         (assert (todo (id ?id) (priority 11) (request-time ?time) (step ?step) (sender nil) (request clean_table) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
-        (modify ?h (id (+ ?id 1)))
-        (printout t crlf crlf)
-        (printout t " STRATEGY" crlf)
-        (printout t " Asserted CLEAN TABLE " ?tr " & " ?tc " at time " ?time)
-        (printout t crlf crlf)
-                                 
+        (modify ?h (id (+ ?id 1)))                                 
 )
 
 ;gestisce i todo di meal senza pillole annesse
@@ -469,7 +461,6 @@
 )
 
 
-
 ;TODO: priority / scelta delle azioni da fare. Per ora è solo un fifo, prende il TODO più vecchio
 (defrule strategy_choose_FIFO_agent_free
         (declare (salience 8))
@@ -531,7 +522,14 @@
         (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
-        (if (neq ?P nil) then (assert (now-serving (person ?P))))
+        (if (neq ?P nil) then 
+                (assert (now-serving (person ?P)))
+                (printout t crlf crlf)
+                (printout t " STRATEGY" crlf)     
+                (printout t " Asserting now-serving fact for " ?P)
+                (printout t crlf crlf)
+
+                )
         (focus PATH)
         (assert (exec-todo (id ?todo-id))) 
 )

@@ -1,3 +1,5 @@
+;GRANDE_history sequenziale
+
 (maxduration 2500)
 
 (initpersonpos

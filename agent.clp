@@ -229,22 +229,6 @@
 )
 
 
-
-	
-; Ho stabilito che al primo step l'azione sia una wait, per avere le percezioni	
-(defrule ask_act_0	
- 	?f <-   (status (step 0))
- 	(not (exec))
-    	=>  
-    	(printout t crlf crlf)
-    	(printout t " AGENT" crlf)
-        (printout t " first action: wait to get perceptions")
-        (printout t crlf crlf)
-        (modify ?f (work on))		
-		(assert (exec (step 0) (action Wait)))			
-)
-
-
 ; Notifica nella finestra di dialogo che c'è stato un bump, a fini di debugging
 (defrule bump_alarm 
 	(declare (salience 14))
@@ -353,13 +337,13 @@
 	(if (> ?fr 0)
 		then
 		(modify ?f (step ?step) (free (- ?fr 1)) (content (insert$ $?cont 1 dessert)) )
-		(printout t crlf crlf)
-		(printout t " AGENT" crlf)
-		(printout t " __________________" crlf)
-		(printout t " CARICATO UN DESSERT ")     
+		; (printout t crlf crlf)
+		; (printout t " AGENT" crlf)
+		; (printout t " __________________" crlf)
+		; (printout t " CARICATO UN DESSERT ")     
 
-		(printout t " __________________" crlf)    
-		(printout t crlf crlf)
+		; (printout t " __________________" crlf)    
+		; (printout t crlf crlf)
 		
 		else        
 		(printout t crlf crlf)
@@ -644,9 +628,9 @@
      	(focus STRATEGY)	
 )
 
-; (defrule test_HALT_debug
-; 	(declare (salience 100))
-; 	(K-agent (step 439))
-; 	=>
-; 	(halt)
-; 	)
+(defrule test_HALT_debug
+	(declare (salience 100))
+	(K-agent (step 649))
+	=>
+	(halt)
+	)

@@ -1,3 +1,4 @@
+;Piccola mappa standard 1
 (maxduration 1000)
 
 (initpersonpos 	

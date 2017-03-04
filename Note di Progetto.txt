@@ -1,23 +1,16 @@
-Versione del progetto 0.4
+Versione del progetto 0.8
 
-L'agente al momento gestisce richieste di pasto (dietetic e normal) e dessert con successo.
-In questa versione riesce anche a gestire le load_pill, associate con prescription Pill "before meal"
-C'é anche la routine, completamente speculare, di pills "after meal".
-Inform spedite ora NON APPENA ARRIVA UNA RICHIESTA. Se c'era un piano in esecuzione tutte le azioni programmate vengono slittate con successo
-di uno step da AGENT.
-Gestione della pulizia. Inoltre rifiuti e consumabili non vengono portati insieme.
 
-Convenzioni/ Euristiche adottate:
-	La prima azione è sempre una Wait (da cambiare)
-	
-	Se l'agente non ha niente da fare, aspetta (da cambiare)
+Convenzioni/ Euristiche adottate:	
+	Se l'agente non ha niente da fare, aspetta 
 
 	L'agente non fa interleaving. Una volta scelta un'azione (un todo) lo porta a termine senza considerare
 	altre richieste. Fatta eccezione per le inform.
 	
-	La strategia è una FIFO. 
+	La strategia è una FIFO con priorità. 
 	
 	I todo clean-table vengono generati 501 unità temporali DOPO che il pasto è stato consegnato. 
+	O, altrimenti, se l'anziano richiede un dessert (e si presume quindi che abbia finito di mangiare).
 
 	Le Inform vengono sempre mandate SUBITO.
 
@@ -42,11 +35,6 @@ Rimangono da testare:
 
 
 Rimangono da modellare:
-	Differenziare i casi di clean table:
-		probabilmente si possono fare se l'anziano ha richiesto il dessert
-		per qualche motivo non va bene la tempistica
-	Aggiungere i casi di Dessert Wait, che da specifica devono avvenire quando il paziente ha meal_after (quindi deve ricevere il dolce dopo le pillole)
-
 	Azioni di "riflesso" (Al momento l'agente ricalcola il path evitando l'ostacolo, nella speranza che
 				non si sposti di nuovo. Si può fare meglio? forse.)
 	Routine di "idling": che cosa fa l'agente quando non ha compiti da fare. 
