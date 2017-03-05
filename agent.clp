@@ -236,9 +236,9 @@
 	=>
 	(printout t crlf crlf)
 	(printout t " AGENT" crlf)
-	(printout t " errore, ho fatto un bump in " ?r " " ?c " andando verso " ?d)         
+	(printout t " WARNING, ho fatto un bump in " ?r " " ?c " andando verso " ?d)         
 	(printout t crlf crlf)
-	;(halt)
+	(halt)
 )
 
 
@@ -628,9 +628,14 @@
      	(focus STRATEGY)	
 )
 
-(defrule test_HALT_debug
-	(declare (salience 100))
-	(K-agent (step 649))
-	=>
-	(halt)
-	)
+; (defrule test_HALT_debug
+; 	(declare (salience 100))
+; 	(K-agent (step ?step))
+; 	(test (eq ?step 650))
+; 	=>
+; 	    (printout t crlf crlf)
+; 	(printout t " AGENT" crlf)
+; 	(printout t " AGENT halted at step " ?step " for debugging")         
+; 	(printout t crlf crlf)	
+; 	(halt)
+; 	)

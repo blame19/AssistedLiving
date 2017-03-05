@@ -185,35 +185,41 @@
         (declare (salience 10))        
         ?f <- (todo (expanded no) (request-time ?rqt) (completed no) (step ?s) (sender ?P) (request meal))
         (K-cell (pos-r ?mdisp-r) (pos-c ?mdisp-c) (contains MealDispenser))
-        (K-cell (pos-r ?pdisp-r) (pos-c ?pdisp-c) (contains PillDispenser))   
-        (K-cell (pos-r ?trash-r) (pos-c ?trash-c) (contains TrashBasket))
         (K-agent (step ?step) (content $?con) (free ?free) )   
-        (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
+        (prescription (patient ?P) (meal ?meal))
         ?h <- (todo-counter (id ?id))
 
-        (test (or (> ?free 0) (and (eq ?free 0) (member$ ?meal $?con)) ) )
+        ;(test (or (> ?free 0) (and (eq ?free 0) (member$ ?meal $?con)) ) )
+        (test (> ?free 0))
         =>
         ;se l'agente ha già caricato quel tipo di pasto richiesto
-        (if (member$ ?meal $?con)
-                then ;OK
+        ; (if (member$ ?meal $?con)
+        ;         then ;OK
+        ;         (modify ?f (expanded yes))
+        ;         else 
+        ;         (if (eq ?free 0)
+        ;                 then 
+        ;                 ;MAKE SPACE
+        ;                 (printout t crlf crlf)
+        ;                 (printout t " STRATEGY" crlf)
+        ;                 (printout t " WARNING: l'agente non ha spazio per caricare" )
+        ;                 (printout t crlf crlf)
+        ;                 ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
+        ;                 ;(modify ?f (expanded yes))
+        ;                 else
+        ;                 ;GET THE MEAL
+        ;                 (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+        ;                 (modify ?h (id (+ ?id 1)))
+        ;                 (modify ?f (expanded yes))
+        ;         )
+        ; )
+               ;GET THE MEAL
+                (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+                (modify ?h (id (+ ?id 1)))
                 (modify ?f (expanded yes))
-                else 
-                (if (eq ?free 0)
-                        then 
-                        ;MAKE SPACE
-                        (printout t crlf crlf)
-                        (printout t " STRATEGY" crlf)
-                        (printout t " WARNING: l'agente non ha spazio per caricare" )
-                        (printout t crlf crlf)
-                        ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo pranzo 
-                        ;(modify ?f (expanded yes))
-                        else
-                        ;GET THE MEAL
-                        (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
-                        (modify ?h (id (+ ?id 1)))
-                        (modify ?f (expanded yes))
-                )
-        )
+       
+
+
 )
 
 
@@ -407,37 +413,6 @@
 )
 
 
-;NOTA: in realtà si potrebbe usare sempre l'euristica della manhattan distance.
-; ;idea: calcolare subito i path necessari a tutti i TODO presenti. 
-; ;Senza un path e un costo di path, la strategy non può farsi un'idea del costo dell'azione complessiva.
-; (defrule path_generate
-;         (declare (salience 10))
-;         (K-agent (step ?step) (pos-r ?r) (pos-c ?c) (direction ?sdir))   
-;         ?g <- (todo (id ?todo-id) (goal_pos-r ?gr) (goal_pos-c ?gc))
-;         (not (path-request (id ?todo-id)))
-;         =>
-;         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))    
-; )
-
-; ;Una volta calcolato il path all'obbiettivo del todo, si può fare una stima un po' più precisa del costo.
-; (defrule todo_cost_estimate
-;         (declare (salience 9))
-;         ?f <- (todo (id ?todo-id) (request ?req) (chosen_path nil))
-;         (path (id ?path-id) (obj-id ?todo-id) (cost ?cost1) (solution yes))
-;         (not (path (obj-id ?todo-id) (cost ?cost2&:(< ?cost2 ?cost1)) (solution yes)))
-;         =>
-;         (modify ?f (cost ?cost1) (chosen_path ?path-id))
-
-; )
-
-; ;Stima dei costi con la manhattan distance invece di un path calcolato completamente
-; (defrule todo_cost_estimate_manhattan
-;         (declare (salience 10))
-;         ?f <- (todo (id ?todo-id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (cost nil))
-;         (K-agent (pos-r ?r) (pos-c ?c))
-;         =>
-;         (modify ?f (cost (manhattan ?r ?c ?gr ?gc)) )
-; )
 
 ;Miglioramento della stima precedente;
 ;nello specifico alla manhattan dist viene aggiunto il costo in tempo delle singole azioni richieste.

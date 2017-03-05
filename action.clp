@@ -1,7 +1,7 @@
 
 ;// ACTION
 
-(defmodule ACTION (import MAIN ?ALL) (export ?ALL) (import AGENT ?ALL) (import STRATEGY ?ALL))
+(defmodule ACTION (import MAIN ?ALL) (export ?ALL)  (import STRATEGY ?ALL))
 
 
 
@@ -82,115 +82,6 @@
 ;     	)
 ; )
 
-;INFORM COMMENTATE
-;Dalle specifiche appare che si debba rispondere YES a tutti i pasti leciti, 
-;tranne quelli in cui le pillole devono essere prese prima del pasto (wait)
-
-; ;Se è stato scelto un todo di tipo load_meal o load_dessert, l'agente deve anche effettuare l'inform necessario
-; (defrule inform_yes
-;       (declare (salience 14))
-;       (exec-todo (id ?id))
-;       ?g <- (current-step-counter (step ?step))
-;       ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed ?info))
-;       (test (or (eq ?info no) (eq ?info wait)))
-;       (test (or (eq ?req load_meal) (eq ?req load_dessert)))
-;       =>
-;       (if (eq ?req load_meal)
-;               then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
-;                    (modify ?f (informed yes))
-;                    (modify ?g (step (+ ?step 1)))
-;         )
-;       (if (eq ?req load_dessert)
-;               then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
-;                    (modify ?f (informed yes))
-;                    (modify ?g (step (+ ?step 1)))
-;         )
-; )
-
-
-; ;Se è stato scelto un todo di un certo tipo, ma esiste anche un altro todo in attesa di tipo load_meal o dessert per qualcuno,
-; ;quella persona viene fatta attendere
-; (defrule inform_delay
-;       (declare (salience 14))
-;       (exec-todo (id ?id))
-;       ?g <- (current-step-counter (step ?step))
-;       (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed yes))
-;       ?f <- (todo (id ?id2&:(neq ?id ?id2)) (sender ?P2) (request ?req2) (informed no))
-;       (test (or (eq ?req2 load_meal) (eq ?req2 load_dessert)))
-;       =>
-;       (if (eq ?req2 load_meal)
-;               then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P2) (param2 meal) (param3 wait) (param4 nil)))
-;                    (modify ?f (informed wait))
-;                    (modify ?g (step (+ ?step 1)))                  
-;         )
-;       (if (eq ?req2 load_dessert)
-;               then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P2) (param2 dessert) (param3 wait) (param4 nil)))
-;                    (modify ?f (informed wait))
-;                    (modify ?g (step (+ ?step 1)))                       
-;         )
-; )
-
-;SPOSTATE IN AGENT PER POTER RISPONDERE SUBITO
-; ;NUOVE INFORM
-; (defrule inform_yes_and_wait
-;       (declare (salience 14))
-;       (exec-todo (id ?id))
-;       ?g <- (current-step-counter (step ?step))
-;       ?f <- (todo (id ?id) (chosen_path ?path-id) (sender ?P) (request ?req) (informed no))      
-;       (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
-;       (test (or (eq ?req load_meal) (eq ?req load_dessert)))
-;       =>
-;       (if (eq ?req load_meal)
-;               then (if (eq ?pills before)  
-;               		then 
-;               		(assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 wait) (param4 nil)))
-;                    	(modify ?f (informed yes))
-;                    	(modify ?g (step (+ ?step 1)))
-;               	   	else
-;               	   	(assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
-;                    	(modify ?f (informed yes))
-;                    	(modify ?g (step (+ ?step 1)))
-;               	   )              	   
-;         )
-;        (if (eq ?req load_dessert)
-;               then (assert (proto-exec (todo-id ?id) (step ?step) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil)))
-;                    (modify ?f (informed yes))
-;                    (modify ?g (step (+ ?step 1)))
-;         )
-; )
-
-
-
-; (defrule exec-path
-; 	(declare (salience 10))
-; 	(translate_path (id ?path-id))
-;         ;(K-agent (step ?step) (pos-r ?r) (pos-c ?c) (direction ?sdir))
-;         ?f <- (node-counter (i ?i))
-;         ?g <- (current-step-counter (step ?step))
-;         (copy-step (path-id ?path-id) (node-id ?i) (father-id ?fid) (node-r ?r1) (node-c ?c1) (direction ?dir1))
-;         (copy-step (path-id ?path-id) (node-id ?y) (father-id ?i) (node-r ?r2) (node-c ?c2) (direction ?dir2))
-;         (test (neq ?i ?y))
-;         (number-of-steps (number ?max))
-;         (test (< ?i ?max))
-;         (exec-todo (id ?id))
-;         =>
-;         (if (and (eq ?r1 ?r2) (eq ?c1 ?c2))
-;         	then ;TURN ROBOT
-;         		(switch (turn ?dir1 ?dir2)
-;         			(case left then 
-;         				(assert (proto-exec (todo-id ?id) (step ?step) (action Turnleft)))
-;         				(modify ?g (step (+ ?step 1))))
-;         			(case right then 
-;         				(assert (proto-exec (todo-id ?id) (step ?step) (action Turnright)))
-;         				(modify ?g (step (+ ?step 1))))
-;         		)
-;         	else ;GO FORWARD
-;         		(assert (proto-exec (todo-id ?id) (step ?step) (action Forward)))
-;         		(modify ?g (step (+ ?step 1)))
-
-;         	)
-;         (modify ?f (i (+ ?i 1)))
-; )
 
 (defrule exec-path
 	(declare (salience 10))

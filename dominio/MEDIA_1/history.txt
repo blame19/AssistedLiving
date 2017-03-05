@@ -1,4 +1,4 @@
-; Media seconda 
+; Media uno
 (maxduration 2100)
 
 (initpersonpos

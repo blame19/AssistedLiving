@@ -1,4 +1,4 @@
-;MEDIA history_dispenser
+;MEDIA 3history_dispenser
 (maxduration 2100)
 
 (initpersonpos
