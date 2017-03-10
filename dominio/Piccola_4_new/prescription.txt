@@ -1,0 +1,20 @@
+
+(prescription (patient P2)
+              (meal dietetic)
+              (pills  before)
+              (dessert yes))
+
+(prescription (patient P1)
+              (meal normal)
+              (pills  no)
+              (dessert yes))
+
+(prescription (patient P3)
+              (meal normal)
+              (pills no )
+              (dessert yes))
+
+(prescription (patient P4)
+              (meal dietetic)
+              (pills after)
+              (dessert no))
