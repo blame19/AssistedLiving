@@ -1,4 +1,4 @@
-;MEDIA history Sequenziale
+;MEDIA 2 history Sequenziale
 (maxduration 2200)
 
 (initpersonpos
