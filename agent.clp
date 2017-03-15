@@ -275,7 +275,7 @@
 	  (test (neq ?p2 nil))
 	  =>
 	  (modify ?f (penalty ?p2))
-	  (if (> ?p2 (+ 200 ?p1))  then 
+	  (if (> ?p2 (+ 500 ?p1))  then 
 	  	(printout t crlf crlf)
 		(printout t " AGENT" crlf)
 		(printout t " PENALTY SKY-ROCKETED: something bad happened at step " ?step " an time " ?time crlf)  
@@ -579,6 +579,13 @@
 		(printout t " Informing " ?p1 " of request " ?p2 " result " ?p3)         
 		(printout t crlf crlf)		
 	)
+	; (if (eq ?a Wait) 
+ ;     		then
+	; 	(printout t crlf crlf)
+	; 	(printout t " WAIT" crlf)
+    
+	; 	(printout t crlf crlf)		
+	; )
        	(focus MAIN)
 )
 
@@ -595,14 +602,6 @@
 	(focus STRATEGY)
 )
 
-; ;Se non ci sono proto_exec in lista, l'agente ripassa a Strategy perché immagina 
-; ;che si debba generare un altro piano
-; (defrule proto_exec_finished
-; 	(declare (salience 1))
-;      	(not (proto-exec))
-;      	=>  
-;     	(focus STRATEGY)	
-; )
 
 ; Comunica DONE quando il tempo sta per scadere
 (defrule DONE_act
@@ -631,7 +630,7 @@
 ; (defrule test_HALT_debug
 ; 	(declare (salience 100))
 ; 	(K-agent (step ?step))
-; 	(test (eq ?step 650))
+; 	(test (eq ?step 439))
 ; 	=>
 ; 	    (printout t crlf crlf)
 ; 	(printout t " AGENT" crlf)

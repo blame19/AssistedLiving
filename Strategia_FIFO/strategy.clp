@@ -6,25 +6,6 @@
 
 ;//_______Facts
 
-;Fatto aggregato da passare ad Action 
-; che contiene tutte le informazioni necessarie per soddisfare la richiesta, generando un piano
-;ricordarsi che se necessario gli slot possono essere lasciati a null
-;(deftemplate to-action
-;       (slot step)
-;        (slot sender)
-;        ;request, per esempio meal e dessert (dall'ENV) o nostre personalizzate (trash, pills, goback, clean_table eccetera)
-        ; eventualmente anche staccate (take_meal, take_dessert)
-;        (slot request)
-        ;se la richista prevede la posizione (normale, di cella vuota)
-;        (slot pos-r) (slot pos-c)
-        ;se la richiesta prevede la posizione di un tavolo o di un dispenser
-;        (slot t_pos-r) (slot t_pos-c)
-        ;parametri opzionali
-;        (slot type_of_meal)
-;        (slot pills)
-;        (slot completed (allowed-values yes no))
-;)
-
 ;struttura di un path. Non viene riempito da STRATEGY, ma da path; è qu solo perché in questo modo sono entrambi visibili
 (deftemplate path  (slot id) (slot obj-id)
         (slot from-r) (slot from-c) 
@@ -330,8 +311,6 @@
         )
 )
 
-
-
 (defrule todo_dessert_expand  
         (declare (salience 10))        
         ?f <- (todo (expanded no) (request-time ?rqt) (completed no) (step ?s) (sender ?P) (request dessert))         
@@ -343,30 +322,22 @@
         (K-agent (step ?step))
         =>
         ;se la persona ha diritto a quel dessert
-        (if (member$ dessert $?con)
-                        then ;OK
-                        (printout t "ok" clrf)
-                        (modify ?f (expanded yes))
-                        else 
-                        (if (eq free 0)
-                                then 
-                                ;MAKE SPACE
-                                 (printout t crlf crlf)
-                                (printout t " STRATEGY" crlf)
-                                (printout t " WARNING: l'agente non ha spazio per caricare il dessert" )
-                                 (printout t crlf crlf)
-                                ;generazione dei todo per svuotare il load dell'agente e caricare un nuovo dessert
-                                ;(modify ?f (expanded yes))
-                                else
-                                ;GET THE DESSERT
-                                (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_dessert) (goal_pos-r ?ddisp-r) (goal_pos-c ?ddisp-c)) )
-                                (modify ?h (id (+ ?id 1)))
-                                (modify ?f (expanded yes))
-                        )  
-        ) 
-             
-         
+        (if (eq free 0)
+            then 
+            ;MAKE SPACE
+            (printout t crlf crlf)
+            (printout t " STRATEGY" crlf)
+            (printout t " WARNING: l'agente non ha spazio per caricare il dessert" )
+            (printout t crlf crlf)
+            else
+            ;GET THE DESSERT
+            (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_dessert) (goal_pos-r ?ddisp-r) (goal_pos-c ?ddisp-c)) )
+            (modify ?h (id (+ ?id 1)))
+            (modify ?f (expanded yes))
+        )  
 )
+
+
 
 (defrule todo_clean_table_dessert_requested
         (declare (salience 11))   
