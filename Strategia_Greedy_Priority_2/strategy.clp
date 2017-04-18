@@ -1,4 +1,4 @@
-;// STRATEGY FIFO
+;// STRATEGY GREEDY PRIORITY 2
 
 (defmodule STRATEGY (import MAIN ?ALL)   (export ?ALL) (import AGENT ?ALL))
 
@@ -50,12 +50,27 @@
 
 ;//_______Rules
 
+; (defrule TESTNEWPATH
+;         (declare (salience 16))
+;         (not (status (step 0)))
+;         =>
+;         (assert (path-request (id 0) (from-r 8) (from-c 6) (to-r 4) (to-c 4) (start-dir north) ))
+;         )
+
 (defrule initialize_todo_count 
         (declare (salience 15))
         (not (todo-counter (id ?id)))
         =>
         (assert (todo-counter (id 0)))
 )
+
+
+; (defrule ask_path
+;         (declare (salience 10))
+;         (path-request (id ?id) (from-r ?r) (from-c ?c) (to-r ?tr) (to-c ?tc) (start-dir ?sdir) (solution nil))
+;         =>
+;         (focus PATH)
+; )
 
 (defrule completed_todo
         (declare (salience 15))
@@ -85,6 +100,7 @@
         (K-agent (direction ?sdir) (pos-r ?r) (pos-c ?c))
         ?f <- (bump-avoid (todo-id ?todo-id) (step ?step) (pos-r ?kr) (pos-c ?kc))
         ?g <- (todo (id ?todo-id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (request-time ?req-time) (step ?step2) (sender ?sender))
+        ;?h <- (exec-todo (id ?todo-id))
         ?i <- (todo-counter (id ?id))
         =>
         ;viene asserito un nuovo todo con nuovo id, e un nuovo fatto di tipo exec-todo con il suo id.
@@ -98,6 +114,8 @@
         (retract ?f)
         (focus PATH)
 )
+
+
 
 ;nella nuova implementazione, questo dovrebbe raccogliere i messaggi dall'agente e 
 ;fornire una lista di "azioni da fare" da ordinare poi in un piano
@@ -115,23 +133,25 @@
         (if (eq ?request meal)
                 then 
                 (switch ?pills 
-                    (case no then 
-                        (assert (todo (priority 10) (id ?id) (step ?s) (sender ?P) (request meal) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                (case no then 
+                        (assert (todo (id ?id) (step ?s) (sender ?P) (priority 10) (request meal) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                         (modify ?h (id (+ ?id 1))) 
-                    )
-                    (case before then 
-                        (assert (todo (priority 10) (id ?id)  (step ?s) (sender ?P) (request meal_before) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                )
+                (case before then 
+                        (assert (todo (id ?id) (step ?s) (sender ?P) (priority 10) (request meal_before) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                         (modify ?h (id (+ ?id 1)))   
-                    )
-                    (case after then   
-                        (assert (todo (priority 10) (id ?id) (step ?s) (sender ?P) (request meal_after) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+
+                )
+                (case after then   
+                        (assert (todo (id ?id) (step ?s) (sender ?P) (priority 10) (request meal_after) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                         (modify ?h (id (+ ?id 1)))
-                    )                        
+                )
+                        
                 )
         )         
         (if (and (eq ?request dessert) (eq ?dess yes))
                 then
-                (assert (todo (priority 10) (id ?id) (step ?s) (sender ?P) (request dessert) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
+                (assert (todo (id ?id) (priority 10) (step ?s) (sender ?P) (request dessert) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
                 (modify ?h (id (+ ?id 1)))
         )
 
@@ -149,14 +169,13 @@
         (K-agent (step ?step) (content $?con) (free ?free) )   
         (prescription (patient ?P) (meal ?meal))
         ?h <- (todo-counter (id ?id))
-        ;(test (or (> ?free 0) (and (eq ?free 0) (member$ ?meal $?con)) ) )
         (test (> ?free 0))
-        =>
-        ;GET THE MEAL
+        =>   ;GET THE MEAL
         (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
         (modify ?h (id (+ ?id 1)))
-        (modify ?f (expanded yes))
+        (modify ?f (expanded yes))    
 )
+
 
 ;gestisce i todo di meal_before
 (defrule todo_meal_before_expand  
@@ -169,7 +188,9 @@
         (prescription (patient ?P) (meal ?meal) (pills ?pills) (dessert ?dessert))
         ?h <- (todo-counter (id ?id))
          (test (or (eq ?free 2) (and (eq ?free 1) (or (member$ ?P $?con) (member$ ?meal $?con)) ) ))
-        =>        
+        =>
+        ;se l'agente ha già caricato quel tipo di pasto richiesto
+        ;TODO
         (if (eq ?free 2)
                 then 
                 ;GET THE MEAL AND PILLS
@@ -209,6 +230,8 @@
         )
 )
 
+
+
 ;gestisce i todo di meal_after
 ;NOTA: al momento uguale a meal_before ... cambia solo in action
 (defrule todo_meal_after_expand  
@@ -222,13 +245,15 @@
         ?h <- (todo-counter (id ?id))
         (test (or (eq ?free 2) (and (eq ?free 1) (or (member$ ?P $?con) (member$ ?meal $?con)) ) ))
         =>
+        ;se l'agente ha già caricato quel tipo di pasto richiesto
+        ;TODO
         (if (eq ?free 2)
                 then 
-                ;GET THE MEAL AND PILLS
-                (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
-                (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )      
-                (modify ?h (id (+ ?id 2)))
-                (modify ?f (expanded yes))
+                    ;GET THE MEAL AND PILLS
+                    (assert (todo (id ?id) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_meal) (goal_pos-r ?mdisp-r) (goal_pos-c ?mdisp-c)) )
+                    (assert (todo (id (+ ?id 1)) (priority 9) (request-time ?rqt) (step ?s) (sender ?P) (request load_pills) (goal_pos-r ?pdisp-r) (goal_pos-c ?pdisp-c)) )      
+                    (modify ?h (id (+ ?id 2)))
+                    (modify ?f (expanded yes))
                 else
                 (if (or (and (eq ?free 1) (member$ ?P $?con) )
                         (and (eq ?free 1) (member$ ?meal $?con) )
@@ -259,6 +284,8 @@
         )
 )
 
+
+
 (defrule todo_dessert_expand  
         (declare (salience 10))        
         ?f <- (todo (expanded no) (request-time ?rqt) (completed no) (step ?s) (sender ?P) (request dessert))         
@@ -285,8 +312,6 @@
         )  
 )
 
-
-
 (defrule todo_clean_table_dessert_requested
         (declare (salience 11))   
         (K-agent (step ?step) (time ?time))
@@ -295,11 +320,10 @@
         (K-received-msg (t_pos-r ?tr) (t_pos-c ?tc) (sender ?P) (request dessert)) 
         (not (todo (request clean_table) (completed no) (goal_pos-r ?tr) (goal_pos-c ?tc)))
         ?h <- (todo-counter (id ?id))
+        ;(printout "DISCLAIMER DISCLAIMER DISCLAIMER DISCLAIMER DISCLAIMER DISCLAIMER DISCLAIMER" crlf)
         =>
         (assert (todo (id ?id) (priority 11) (request-time ?time) (step ?step) (sender nil) (request clean_table) (goal_pos-r ?tr) (goal_pos-c ?tc)) )
         (modify ?h (id (+ ?id 1)))
-   
-                                 
 )
 
 (defrule todo_clean_table_meal_duration
@@ -328,35 +352,33 @@
         (modify ?h (id (+ ?id 1)))    
 )
 
-;Stima il costo delle azioni basandosi su un'euristica manhattan del percorso più il costo temporale della singola azione specifica
 (defrule todo_cost_estimate_manhattan_action
-        (declare (salience 10))
-        ?f <- (todo (id ?todo-id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (cost nil))
-        (K-agent (pos-r ?r) (pos-c ?c))
-        =>
-        (switch ?req 
-                (case load_dessert then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10)) ))
-                (case load_pills then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10)) ))
-                (case load_meal then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 15)) ))
-                (case meal then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 12)) ))
-                (case meal_before then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 22)) ))
-                (case meal_after then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 22)) ))
-                (case dessert then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10)) ))
-                (case clean_table then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 30)) ))
-                (case empty_trash then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10)) ))
-        )
-       
+    (declare (salience 10))
+    ?f <- (todo (id ?todo-id) (priority ?pr) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (cost nil))
+    (K-agent (pos-r ?r) (pos-c ?c))
+    =>
+    (switch ?req 
+            (case load_dessert then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10 (* ?pr 1000) )) ))
+            (case load_pills then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10 (* ?pr 1000) )) ))
+            (case load_meal then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 15 (* ?pr 1000) )) ))
+            (case meal then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 12 (* ?pr 1000) )) ))
+            (case meal_before then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 22 (* ?pr 1000) )) ))
+            (case meal_after then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 22 (* ?pr 1000) )) ))
+            (case dessert then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10 (* ?pr 1000) )) ))
+            (case clean_table then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 30 (* ?pr 1000) )) ))
+            (case empty_trash then  (modify ?f (cost (+ (manhattan ?r ?c ?gr ?gc) 10 (* ?pr 1000) )) ))
+    )       
 )
 
-;Scelta del todo da eseguire. 
-;Strategia FIFO con priorità.
-;Questa regola si attiva se l'agente è libero e se non sta servendo nessuno.  
-(defrule strategy_choose_FIFO_agent_free
+
+(defrule strategy_choose_Greed2_agent_free
         (declare (salience 8))
         (not (now-serving))
         ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
-        (not (todo (completed no) (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
+        ;(not (todo (completed no) (priority ?pr2&:(< ?pr2 ?priority))))
+        (not (todo (completed no) (cost ?c2&:(and (neq ?c2 nil) (neq ?c1 nil) (< ?c2 ?c1)))))
         (not (exec-todo ))
+        
         (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free ?free))
         (test (not (and (eq ?waste yes) (or (eq ?req load_meal) (eq ?req load_dessert) (eq ?req load_pills)  (eq ?req dessert) (eq ?req meal) (eq ?req meal_before) (eq ?req meal_after) ))) )
         (test (not (and (< ?free 2) (eq ?req clean_table) )))
@@ -364,7 +386,7 @@
         => 
         (printout t crlf crlf)
         (printout t " STRATEGY" crlf)     
-        (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
+        (printout t " execute todo " ?todo-id " requiring action " ?req " for " ?P " at " ?gr " & " ?gc)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         (if (neq ?P nil) then (assert (now-serving (person ?P))))
@@ -372,14 +394,11 @@
         (assert (exec-todo (id ?todo-id))) 
 )
 
-;Scelta del todo da eseguire. 
-;Strategia FIFO con priorità.
-;Questa regola si attiva se l'agente non è libero e se non sta servendo nessuno.  
-(defrule strategy_choose_FIFO_agent_not_free
+(defrule strategy_choose_Greed2_agent_not_free
         (declare (salience 8))
         (not (now-serving))        
         ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
-        (not (exec-todo))
+         (not (exec-todo))
         (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free 0))
         (test (and (neq ?req load_meal) (neq ?req load_dessert) (neq ?req load_pills)  (neq ?req clean_table) ))
         => 
@@ -392,14 +411,12 @@
         (assert (exec-todo (id ?todo-id))) 
 )
 
-;Scelta del todo da eseguire. 
-;Strategia FIFO con priorità.
-;Questa regola si attiva se l'agente è libero e se ha iniziato già a servire qualcuno.  
 (defrule strategy_choose_person_agent_free
         (declare (salience 8))
         (now-serving (person ?P))
         ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
-        (not (todo (completed no)  (sender ?P) (step ?s2&:(<= ?s2 ?s)) (priority ?pr2&:(< ?pr2 ?priority))  ))
+        ;(not (todo (completed no) (priority ?pr2&:(< ?pr2 ?priority))))
+        (not (todo (completed no) (sender ?P) (cost ?c2&:(and (neq ?c2 nil) (neq ?c1 nil) (< ?c2 ?c1)))))
         (not (exec-todo)) 
         (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free ?free))
         (test (not (and (eq ?waste yes) (or (eq ?req load_meal) (eq ?req load_dessert) (eq ?req load_pills)  (eq ?req dessert) (eq ?req meal) (eq ?req meal_before) (eq ?req meal_after) ))) )
@@ -413,18 +430,17 @@
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         (if (neq ?P nil) then 
                 (assert (now-serving (person ?P)))
- ;               (printout t crlf crlf)
- ;               (printout t " STRATEGY" crlf)     
- ;               (printout t " Asserting now-serving fact for " ?P)
- ;               (printout t crlf crlf)
+                (printout t crlf crlf)
+                (printout t " STRATEGY" crlf)     
+                (printout t " Asserting now-serving fact for " ?P)
+                (printout t crlf crlf)
+
                 )
         (focus PATH)
         (assert (exec-todo (id ?todo-id))) 
 )
 
-;Scelta del todo da eseguire. 
-;Strategia FIFO con priorità.
-;Questa regola si attiva se l'agente non è libero e se ha iniziato già a servire qualcuno. 
+
 (defrule strategy_choose_person_agent_not_free
         (declare (salience 8))
         (now-serving (person ?P))  
@@ -442,21 +458,20 @@
         (assert (exec-todo (id ?todo-id))) 
 )
 
-;ritrae i fatti di tipo now serving.
 (defrule finished_serving
         (declare (salience 9))
         ?f <- (now-serving (person ?P))
         (not  (todo (sender ?P) (completed no) ))
         =>
-;         (printout t crlf crlf)
-;        (printout t " STRATEGY" crlf)     
-;        (printout t " retracting now-serving fact for " ?P)
-;        (printout t crlf crlf)
+         (printout t crlf crlf)
+        (printout t " STRATEGY" crlf)     
+        (printout t " retracting now-serving fact for " ?P)
+        (printout t crlf crlf)
         (retract ?f)
 )
 
 
-;Sceglie il miglior path tra quelli proposti dal modulo PATH.
+
 (defrule choose_best_path
         (declare (salience 10))
         ?f <- (todo (id ?todo-id) (request ?req) (chosen_path nil))        

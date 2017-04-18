@@ -275,7 +275,7 @@
 	  (test (neq ?p2 nil))
 	  =>
 	  (modify ?f (penalty ?p2))
-	  (if (> ?p2 (+ 500 ?p1))  then 
+	  (if (> ?p2 (+ 1000 ?p1))  then 
 	  	(printout t crlf crlf)
 		(printout t " AGENT" crlf)
 		(printout t " PENALTY SKY-ROCKETED: something bad happened at step " ?step " an time " ?time crlf)  
@@ -377,7 +377,7 @@
 		(printout t "AGENT" crlf)
 		(printout t "errore, Agente pieno")         
 		(printout t crlf crlf)
-		(halt)
+		;(halt)
 	)	
 	(retract ?e)	
 )
@@ -396,6 +396,7 @@
 	(printout t " AGENT" crlf)
 	(printout t " Caricata spazzatura")         
 	(printout t crlf crlf)    	
+	
 )
 
 ; Sceglie l'elemento da scaricare nella lista
@@ -534,7 +535,10 @@
      		then
 		(printout t crlf crlf)
 		(printout t " AGENT" crlf)
-		(printout t " Delivery Action " ?a  " at step " ?i " while I am in " ?r " & " ?c " in time " ?time)         
+		;(printout t " __________________" crlf)
+		(printout t " Delivery Action " ?a  " at step " ?i " while I am in " ?r " & " ?c " in time " ?time crlf)
+		;(halt)
+		(printout t " Params " ?p1 " " ?p2 " " ?p3 " " ?p4 )         
 		(printout t crlf crlf)
 		;(if (eq ?a DeliveryDessert) then (halt) )
 
@@ -544,7 +548,8 @@
      		then
 		(printout t crlf crlf)
 		(printout t " AGENT" crlf)
-		(printout t " Load Action " ?a  " at step " ?i " while I am in " ?r " & " ?c " in time " ?time)         
+		(printout t " Load Action " ?a  " at step " ?i " while I am in " ?r " & " ?c " in time " ?time crlf)
+		(printout t " Params " ?p1 " " ?p2 " " ?p3 " " ?p4 )           
 		(printout t crlf crlf)
 	)
 
@@ -556,19 +561,20 @@
 	; 	(printout t crlf crlf)
 	; )
 
-	(if (eq ?a EmptyRobot) 
-     		then
-		(printout t crlf crlf)
-		(printout t " AGENT" crlf)
-		(printout t " Emptied Robot Trash in " ?r " & " ?c " facing " ?dir)         
-		(printout t crlf crlf)
-	)
+	; (if (eq ?a EmptyRobot) 
+ ;     		then
+	; 	(printout t crlf crlf)
+	; 	(printout t " AGENT" crlf)
+	; 	(printout t " Emptied Robot Trash in " ?r " & " ?c " facing " ?dir)         
+	; 	(printout t crlf crlf)
+	; )
 
 	(if (eq ?a CleanTable) 
      		then
 		(printout t crlf crlf)
 		(printout t " AGENT" crlf)
-		(printout t " Cleaned table near " ?r " & " ?c " facing " ?dir " in time " ?time)         
+		(printout t " Cleaned table near " ?r " & " ?c " facing " ?dir " in time " ?time) 
+		;(halt)        
 		(printout t crlf crlf)
 		
 	)
@@ -630,7 +636,7 @@
 ; (defrule test_HALT_debug
 ; 	(declare (salience 100))
 ; 	(K-agent (step ?step))
-; 	(test (eq ?step 439))
+; 	(test (eq ?step 644))
 ; 	=>
 ; 	    (printout t crlf crlf)
 ; 	(printout t " AGENT" crlf)
