@@ -1,0 +1,90 @@
+; Prescr for Grande_semi_auto_3
+(prescription (patient P1)
+(meal dietetic)
+(pills after)
+(dessert no))
+
+(prescription (patient P2)
+(meal normal)
+(pills after)
+(dessert no))
+
+(prescription (patient P3)
+(meal normal)
+(pills no)
+(dessert no))
+
+(prescription (patient P4)
+(meal normal)
+(pills no)
+(dessert no))
+
+(prescription (patient P5)
+(meal normal)
+(pills no)
+(dessert yes))
+
+(prescription (patient P6)
+(meal dietetic)
+(pills before)
+(dessert no))
+
+(prescription (patient P7)
+(meal dietetic)
+(pills no)
+(dessert yes))
+
+(prescription (patient P8)
+(meal normal)
+(pills after)
+(dessert no))
+
+(prescription (patient P9)
+(meal dietetic)
+(pills after)
+(dessert yes))
+
+(prescription (patient P10)
+(meal dietetic)
+(pills before)
+(dessert no))
+
+(prescription (patient P11)
+(meal normal)
+(pills after)
+(dessert yes))
+
+(prescription (patient P12)
+(meal normal)
+(pills no)
+(dessert yes))
+
+(prescription (patient P13)
+(meal normal)
+(pills no)
+(dessert no))
+
+(prescription (patient P14)
+(meal normal)
+(pills before)
+(dessert yes))
+
+(prescription (patient P15)
+(meal normal)
+(pills after)
+(dessert no))
+
+(prescription (patient P16)
+(meal normal)
+(pills before)
+(dessert yes))
+
+(prescription (patient P17)
+(meal dietetic)
+(pills after)
+(dessert yes))
+
+(prescription (patient P18)
+(meal dietetic)
+(pills no)
+(dessert no))

@@ -1,0 +1,41 @@
+; Prescr for Media_semi_auto_4
+(prescription (patient P1)
+(meal normal)
+(pills after)
+(dessert no))
+
+(prescription (patient P2)
+(meal dietetic)
+(pills no)
+(dessert no))
+
+(prescription (patient P3)
+(meal dietetic)
+(pills before)
+(dessert no))
+
+(prescription (patient P4)
+(meal normal)
+(pills no)
+(dessert yes))
+
+(prescription (patient P5)
+(meal dietetic)
+(pills after)
+(dessert yes))
+
+(prescription (patient P6)
+(meal normal)
+(pills no)
+(dessert no))
+
+(prescription (patient P7)
+(meal dietetic)
+(pills no)
+(dessert no))
+
+(prescription (patient P8)
+(meal dietetic)
+(pills no)
+(dessert no))
+

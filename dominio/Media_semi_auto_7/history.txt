@@ -1,0 +1,75 @@
+; history for Media_semi_auto_7
+ 
+ (maxduration 2000)
+
+(initpersonpos 
+	(ident P1)
+ (type patient) 
+(pos-r 4)(pos-c 4))
+
+(initpersonpos 
+	(ident P2)
+ (type patient) 
+(pos-r 5)(pos-c 12))
+
+(initpersonpos 
+	(ident P3)
+ (type patient) 
+(pos-r 13)(pos-c 13))
+
+(initpersonpos 
+	(ident P4)
+ (type patient) 
+(pos-r 5)(pos-c 4))
+
+(initpersonpos 
+	(ident P5)
+ (type patient) 
+(pos-r 11)(pos-c 13))
+
+(initpersonpos 
+	(ident P6)
+ (type patient) 
+(pos-r 13)(pos-c 6))
+
+(initpersonpos 
+	(ident P7)
+ (type patient) 
+(pos-r 3)(pos-c 13))
+
+(initpersonpos 
+	(ident P8)
+ (type patient) 
+(pos-r 14)(pos-c 14))
+
+(initpersonpos 
+	(ident P9)
+ (type patient) 
+(pos-r 14)(pos-c 10))
+
+;(initpersonpos 
+;	(ident St1)
+; (type staff) 
+;(pos-r 8)(pos-c 14))
+
+;(initpersonpos 
+;	(ident St2)
+; (type staff) 
+;(pos-r 12)(pos-c 10))
+
+
+
+(event (step 23) (type meal) (person P1))
+(event (step 85) (type dessert) (person P1))
+(event (step 139) (type meal) (person P2))
+(event (step 233) (type dessert) (person P2))
+;(event (step 200) (type meal) (person P3))
+;(event (step 240) (type dessert) (person P3))
+(event (step 53) (type meal) (person P4))
+(event (step 140) (type dessert) (person P4))
+(event (step 282) (type meal) (person P5))
+(event (step 391) (type dessert) (person P5))
+(event (step 111) (type meal) (person P6))
+(event (step 197) (type dessert) (person P6))
+(event (step 146) (type meal) (person P7))
+(event (step 234) (type dessert) (person P7))

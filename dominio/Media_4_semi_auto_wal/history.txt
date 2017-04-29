@@ -1,0 +1,145 @@
+; history for Media_semi_auto_4
+ 
+ (maxduration 2000)
+
+(initpersonpos 
+	(ident P1)
+ (type patient) 
+(pos-r 2)(pos-c 3))
+
+(initpersonpos 
+	(ident P2)
+ (type patient) 
+(pos-r 2)(pos-c 13))
+
+(initpersonpos 
+	(ident P3)
+ (type patient) 
+(pos-r 14)(pos-c 13))
+
+(initpersonpos 
+	(ident P4)
+ (type patient) 
+(pos-r 8)(pos-c 2))
+
+(initpersonpos 
+	(ident P5)
+ (type patient) 
+(pos-r 5)(pos-c 13))
+
+(initpersonpos 
+	(ident P6)
+ (type patient) 
+(pos-r 14)(pos-c 9))
+
+(initpersonpos 
+	(ident P7)
+ (type patient) 
+(pos-r 13)(pos-c 4))
+
+(initpersonpos 
+	(ident P8)
+ (type patient) 
+(pos-r 4)(pos-c 12))
+
+(initpersonpos 
+	(ident St1)
+ (type staff) 
+(pos-r 8)(pos-c 8))
+
+(initpersonpos 
+	(ident St2)
+ (type staff) 
+(pos-r 3)(pos-c 3))
+
+(initpersonpos 
+	(ident St3)
+ (type staff) 
+(pos-r 9)(pos-c 4))
+
+(event (step 120) (type meal) (person P1))
+(event (step 213) (type dessert) (person P1))
+
+(event (step 10) (type meal) (person P2))
+(event (step 73) (type dessert) (person P2))
+
+(event (step 100) (type meal) (person P3))
+(event (step 260) (type dessert) (person P3))
+
+(event (step 320) (type meal) (person P4))
+(event (step 363) (type dessert) (person P4))
+
+(event (step 190) (type meal) (person P5))
+(event (step 273) (type dessert) (person P5))
+
+(event (step 320) (type meal) (person P6))
+(event (step 333) (type dessert) (person P6))
+
+(event (step 320) (type meal) (person P7))
+(event (step 333) (type dessert) (person P7))
+
+(personmove(step 30)(ident St2)(path-id S2))
+(personmove(step 101)(ident St1)(path-id S1))
+(personmove(step 141)(ident P8)(path-id P8))
+(personmove(step 241)(ident St1)(path-id S1_2))
+
+
+
+( move-path P8 1 P8 4 12 )
+( move-path P8 2 P8 5 12 )
+( move-path P8 3 P8 6 12 )
+( move-path P8 4 P8 7 12 )
+( move-path P8 5 P8 8 12 )
+( move-path P8 6 P8 8 11 )
+( move-path P8 7 P8 8 10 )
+( move-path P8 8 P8 8 9 )
+( move-path P8 9 P8 7 8 )
+
+( move-path S2 1 St2 3 3 )
+( move-path S2 2 St2 3 4 ) 
+( move-path S2 3 St2 3 5 )
+( move-path S2 4 St2 3 6 )
+( move-path S2 5 St2 3 7 )
+( move-path S2 6 St2 4 7 )
+( move-path S2 7 St2 4 8 )
+( move-path S2 8 St2 4 7 )
+( move-path S2 9 St2 5 7 )
+( move-path S2 10 St2 5 6 )
+( move-path S2 11 St2 6 6 )
+( move-path S2 12 St2 6 5 )
+( move-path S2 13 St2 6 4 )
+( move-path S2 14 St2 7 4 )
+( move-path S2 15 St2 6 4 )
+( move-path S2 16 St2 6 3 )
+( move-path S2 17 St2 5 3 )
+( move-path S2 18 St2 4 3 )
+
+( move-path S1 1 St1 8 8 )
+( move-path S1 2 St1 9 8 )
+( move-path S1 3 St1 10 8 )
+( move-path S1 4 St1 11 8 )
+( move-path S1 5 St1 12 8 )
+( move-path S1 6 St1 13 8 )
+( move-path S1 7 St1 14 8 )
+( move-path S1 8 St1 13 8 )
+( move-path S1 9 St1 13 9 )
+( move-path S1 10 St1 13 10 )
+( move-path S1 11 St1 13 11 )
+( move-path S1 12 St1 13 12 )
+( move-path S1 13 St1 13 13 )
+
+( move-path S1_2 1 St1 13 12 )
+( move-path S1_2 2 St1 12 12 )
+( move-path S1_2 3 St1 12 11 )
+( move-path S1_2 4 St1 12 10 )
+( move-path S1_2 5 St1 13 10 )
+( move-path S1_2 6 St1 13 9 )
+( move-path S1_2 7 St1 13 8 )
+( move-path S1_2 8 St1 13 7 )
+( move-path S1_2 9 St1 13 6 )
+( move-path S1_2 10 St1 13 5 )
+( move-path S1_2 11 St1 12 5 )
+( move-path S1_2 12 St1 12 6 )
+( move-path S1_2 13 St1 12 7 )
+( move-path S1_2 14 St1 11 7 )
+( move-path S1_2 15 St1 10 7 )
