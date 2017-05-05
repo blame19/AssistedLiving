@@ -105,7 +105,7 @@
         =>
         ;viene asserito un nuovo todo con nuovo id, e un nuovo fatto di tipo exec-todo con il suo id.
         ;in questo modo si esclude il todo precedente (che viene cancellato) e si forza PATH a ricalcolare il percorso
-        (assert (todo (priority 7) (id ?id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (request-time ?req-time) (step ?step2) (sender ?sender)))
+        (assert (todo (priority 6) (id ?id) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (request-time ?req-time) (step ?step2) (sender ?sender)))
         (assert (path-request (id ?id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         ;(modify ?h (id ?id))
         (assert (exec-todo (id ?id)))
@@ -348,7 +348,7 @@
         (not (todo (request empty_trash) (completed no) (goal_pos-r ?tr) (goal_pos-c ?tc)))   
         ?h <- (todo-counter (id ?id))        
         =>
-        (assert (todo (id ?id) (priority 6) (request-time ?time) (step ?step) (sender nil) (request empty_trash) (goal_pos-r ?trash-r) (goal_pos-c ?trash-c)) )
+        (assert (todo (id ?id) (priority 7) (request-time ?time) (step ?step) (sender nil) (request empty_trash) (goal_pos-r ?trash-r) (goal_pos-c ?trash-c)) )
         (modify ?h (id (+ ?id 1)))    
 )
 
