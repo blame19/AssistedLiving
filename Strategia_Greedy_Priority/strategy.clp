@@ -402,7 +402,7 @@
         (declare (salience 8))
         (not (now-serving))
         ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
-        (not (todo (completed no) (priority ?pr2&:(< ?pr2 ?priority)) (cost ?c2&:(and (neq ?c2 nil) (neq ?c1 nil) (< ?c2 ?c1))) ))
+        (not (todo (completed no) (priority ?pr2) (cost ?c2&:(and (neq ?c2 nil) (neq ?c1 nil) (< ?c2 ?c1) (< ?pr2 ?priority))) ))
         (not (exec-todo ))
         
         (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free ?free))
@@ -410,7 +410,7 @@
         (test (> ?free 0))
         => 
         (printout t crlf crlf)
-        (printout t " STRATEGY" crlf)     
+        (printout t " STRATEGY AGENT FREE" crlf)     
         (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
@@ -428,7 +428,7 @@
         (test (and (neq ?req load_meal) (neq ?req load_dessert) (neq ?req load_pills)  (neq ?req clean_table) ))
         => 
         (printout t crlf crlf)
-        (printout t " STRATEGY" crlf)     
+        (printout t " STRATEGY AGENT NOT FREE" crlf)     
         (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
@@ -441,21 +441,22 @@
 
         (now-serving (person ?P))
         ?f <- (todo (id ?todo-id) (chosen_path ?path-id) (cost ?c1) (priority ?priority) (step ?s) (sender ?P) (request ?req) (goal_pos-r ?gr) (goal_pos-c ?gc) (completed no))
-        (not (todo (completed no)  (sender ?P) (priority ?pr2&:(< ?pr2 ?priority))  (cost ?c2&:(and (neq ?c2 nil) (neq ?c1 nil) (< ?c2 ?c1))) ))
+        (not (todo (completed no)  (sender ?P) (priority ?pr2)  (cost ?c2&:(and (neq ?c2 nil) (neq ?c1 nil) (< ?c2 ?c1) (< ?pr2 ?priority))) ))
         (not (exec-todo)) 
-        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free ?free))
+        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (content $?content) (free ?free))
         (test (not (and (eq ?waste yes) (or (eq ?req load_meal) (eq ?req load_dessert) (eq ?req load_pills)  (eq ?req dessert) (eq ?req meal) (eq ?req meal_before) (eq ?req meal_after) ))) )
         (test (> ?free 0))
+        (test (not (and (or (eq ?req meal_before) (eq ?req meal_after)) (not (member$ ?P $?content) ))))
         => 
         (printout t crlf crlf)
-        (printout t " STRATEGY" crlf)     
+        (printout t " STRATEGY PERSON " ?P " AGENT FREE" crlf)     
         (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))
         (if (neq ?P nil) then 
                 (assert (now-serving (person ?P)))
                 (printout t crlf crlf)
-                (printout t " STRATEGY" crlf)     
+                (printout t " STRATEGY " crlf)     
                 (printout t " Asserting now-serving fact for " ?P)
                 (printout t crlf crlf)
 
@@ -473,7 +474,7 @@
         (test (and (neq ?req load_meal) (neq ?req load_dessert) (neq ?req load_pills)  (neq ?req clean_table) ))
         => 
         (printout t crlf crlf)
-        (printout t " STRATEGY" crlf)     
+        (printout t " STRATEGY PERSON " ?P " AGENT NOT FREE" crlf)     
         (printout t " execute todo " ?todo-id " requiring action " ?req " at " ?gr " & " ?gc)
         (printout t crlf crlf)
         (assert (path-request (id ?todo-id) (from-r ?r) (from-c ?c) (to-r ?gr) (to-c ?gc) (start-dir ?sdir) (solution nil)))

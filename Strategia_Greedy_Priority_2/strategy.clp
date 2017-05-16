@@ -379,7 +379,7 @@
         (not (todo (completed no) (cost ?c2&:(and (neq ?c2 nil) (neq ?c1 nil) (< ?c2 ?c1)))))
         (not (exec-todo ))
         
-        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free ?free))
+        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (content $?content) (waste ?waste) (free ?free))
         (test (not (and (eq ?waste yes) (or (eq ?req load_meal) (eq ?req load_dessert) (eq ?req load_pills)  (eq ?req dessert) (eq ?req meal) (eq ?req meal_before) (eq ?req meal_after) ))) )
         (test (not (and (< ?free 2) (eq ?req clean_table) )))
         (test (> ?free 0))
@@ -418,10 +418,11 @@
         ;(not (todo (completed no) (priority ?pr2&:(< ?pr2 ?priority))))
         (not (todo (completed no) (sender ?P) (cost ?c2&:(and (neq ?c2 nil) (neq ?c1 nil) (< ?c2 ?c1)))))
         (not (exec-todo)) 
-        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (waste ?waste) (free ?free))
+        (K-agent (pos-r ?r) (pos-c ?c) (direction ?sdir) (content $?content) (waste ?waste) (free ?free))
         (test (not (and (eq ?waste yes) (or (eq ?req load_meal) (eq ?req load_dessert) (eq ?req load_pills)  (eq ?req dessert) (eq ?req meal) (eq ?req meal_before) (eq ?req meal_after) ))) )
         (test (not (and (< ?free 2) (eq ?req clean_table) )))
         (test (> ?free 0))
+        (test (not (and (or (eq ?req meal_before) (eq ?req meal_after)) (not (member$ ?P $?content) ))))
         => 
         (printout t crlf crlf)
         (printout t " STRATEGY" crlf)     

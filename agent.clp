@@ -146,13 +146,24 @@
 	(if (eq ?pills before) 
 		then
 		;Inform di Wait 
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 meal) (param3 wait) (param4 nil)))
+		(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 meal) (param3 wait) (param4 nil)))
 		else
 		;Inform di Ok 
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
+		(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 meal) (param3 yes) (param4 nil)))
 	)
 	;(halt)
 )
+
+;(defrule contemporary_informs
+;	(declare (salience 14))
+;	(status (step ?i))
+;	?g <- (proto-exec (step ?s1) (action Inform) (param1 ?P11) (param2 ?P21) (param3 ?P31) (param4 ?P41))	
+;	?f <- (proto-exec (step ?s2) (action Inform) (param1 ?P12) (param2 ?P22) (param3 ?P32) (param4 ?P42))
+;	(not (K-exec (step ?s2) (action Inform) (param1 ?P12) (param2 ?P22) (param3 ?P32) (param4 ?P42)))
+;	(test (and (= ?s1 ?s2) (neq ?f ?g) ))
+;	=>
+;	(modify ?f (step (+ ?s2 1)))
+;)
 
 ;Regola che si attiva all'arrivo di una richiesta di dessert.
 ;Manda subito l'inform, poi strategy si occuperà di come e quando portarla a termine
@@ -172,13 +183,13 @@
 	(if (eq ?dessert yes) then
 		;Accetto la richiesta
 		(if (eq ?pills after) then 
-			(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 wait) (param4 nil)))
+			(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 wait) (param4 nil)))
 			else
-			(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil))) 
+			(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil))) 
 		)
 		else 
 		;Rifiuto della richiesta perché contraria alla prescrizione 
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
+		(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
 	)
 )
 
@@ -198,10 +209,10 @@
 	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
 	(if (eq ?dessert yes) then
 		;Accetto la richiesta
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 wait) (param4 nil)))			
+		(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 wait) (param4 nil)))			
 		else 
 		;Rifiuto della richiesta perché contraria alla prescrizione 
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
+		(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
 	)
 )
 
@@ -220,11 +231,11 @@
 	(assert (K-received-msg (step ?s) (sender ?P) (request dessert) (t_pos-r ?tr) (t_pos-c ?tc)))
 	(if (eq ?dessert yes) then
 		;Accetto la richiesta
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil))) 
+		(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 yes) (param4 nil))) 
 		
 		else 
 		;Rifiuto della richiesta perché contraria alla prescrizione 
-		(assert (exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
+		(assert (proto-exec (step ?s) (action Inform) (param1 ?P) (param2 dessert) (param3 reject) (param4 nil)))
 	)
 )
 
@@ -245,7 +256,9 @@
 ; Inizio procedura per evitare i bump
 (defrule bump_avoid_initiate_repath
 	(declare (salience 14))
-	(perc-vision (time ?time) (step ?step) (pos-r ?r) (pos-c ?c) (direction ?d) (perc1 ?perc1) (perc2 ?perc2) (perc3 ?perc3) (perc4 ?perc4) (perc6 ?perc6) (perc7 ?perc7) (perc8 ?perc8) (perc9 ?perc9))
+	(perc-vision (time ?time) (step ?step) (pos-r ?r) (pos-c ?c) (direction ?d) 
+		(perc1 ?perc1) (perc2 ?perc2) (perc3 ?perc3) (perc4 ?perc4) (perc6 ?perc6) 
+		(perc7 ?perc7) (perc8 ?perc8) (perc9 ?perc9))
 	(K-agent (step ?step))
 	(proto-exec (todo-id ?id) (step ?step) (action Forward))
 	?f <- (K-cell (pos-r ?kr) (pos-c ?kc) (contains ?cont))
@@ -441,10 +454,11 @@
 (defrule update_agent_unload_trash
 	(declare (salience 15))	
 	(K-exec (step ?step1) (action ReleaseTrash) (param1 ?p1) (param2 ?p2) (param3 ?p3))
-	?f <- (K-agent (step ?step1) (waste yes))	
+	?f <- (K-agent (step ?step2) (waste yes))
+	(test (= (- ?step2 1) ?step1))	
 	;(test (= ?step (+ ?step1 1)))
 	=> 
-	(modify ?f (step (+ ?step1 1)) (waste no) )
+	(modify ?f (waste no) )
 )
 
 ;Trasforma una proto-exec in una exec
@@ -476,6 +490,21 @@
 	;(modify ?f (step (+ ?step 1)))
 	;(modify ?g (step (+ ?step1 1)))	
 )
+
+;Manda in exec un'exec già presente - come nel caso delle inform
+;aggiora eventuali azioni proto-exec programmate aumentando il contatore di step
+;(defrule assert_proto-exec_conflict	
+;	(declare (salience 12))
+;	(K-agent (step ?step))
+;	(proto-exec (todo-id ?id1) (step ?step) (action ?a) (param1 ?p1) (param2 ?p2) (param3 ?p3) (param4 ?p4))
+;	?f <- (proto-exec (todo-id ?id2) (step ?step) )
+	;?g <- (proto-exec (todo-id ?id) (step ?step1) )
+;	(test (neq ?id1 ?id2))	
+;	=>
+;	(assert (proto-exec-reorder))
+	;(modify ?f (step (+ ?step 1)))
+	;(modify ?g (step (+ ?step1 1)))	
+;)
 
 (defrule proto-exec_order_fix_init	
 	(declare (salience 12))
@@ -627,20 +656,9 @@
 )
 
 (defrule nothing_else_todo
- 	(declare (salience 0))
-      
+ 	(declare (salience 0))      
       	=>  
      	(focus STRATEGY)	
 )
 
-; (defrule test_HALT_debug
-; 	(declare (salience 100))
-; 	(K-agent (step ?step))
-; 	(test (eq ?step 644))
-; 	=>
-; 	    (printout t crlf crlf)
-; 	(printout t " AGENT" crlf)
-; 	(printout t " AGENT halted at step " ?step " for debugging")         
-; 	(printout t crlf crlf)	
-; 	(halt)
-; 	)
+; 
